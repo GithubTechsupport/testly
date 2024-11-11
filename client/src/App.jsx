@@ -11,21 +11,21 @@ function App() {
 
   useEffect(() => {
     if (location.pathname == '/TestCreation') {
-      setShowNewTest(false)
+      setShowNewTest(false);
     } else {setShowNewTest(true)}
     console.log(location.pathname);
   }, [location.pathname]);
 
   return (
-  <>
+  <div className="size-full flex flex-col bg-white">
   <Navbar/>
-  {showNewTest ? (<NewTestButton/>) : (<>TEST</>)}
+  {showNewTest ? (<NewTestButton/>) : (<></>)}
   <Routes>
     <Route path="/testcreation" element={<TestCreation />} />
     <Route path="/home" element={<Homepage />} />
   </Routes>
-  </>
-  )
+  </div>
+  );
 }
 
-export default App
+export default App;
