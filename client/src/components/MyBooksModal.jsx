@@ -1,11 +1,33 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import complex_analysis_book_cover from '../example_covers/complex_analysis_book_cover.jpg';
+import ChapterListModal from './ChapterListModal';
 
-export default function MyBooksModal({ open, onClose }) {
+export default function MyBooksModal({ open, onClose, searchQuery, setSearchQuery }) {
   const cover1 = useRef(complex_analysis_book_cover);
+  const [OpenChapterListModal, setOpenChapterListModal] = useState(false)
+  const [currentBook, setCurrentBook] = useState(null)
+  const [chapterSearchQuery, setChapterSearchQuery] = useState("")
+
+  const handleOpenChapterList = (bookID) => {
+    setCurrentBook(bookID);
+  }
+
+  const handleCloseChapterList = () => {
+    setChapterSearchQuery("");
+    setCurrentBook(null);
+  }
+
+  useEffect(() => {
+    if (currentBook == null) {
+      setOpenChapterListModal(false);
+      return;
+    }
+    setOpenChapterListModal(true);
+  }, [currentBook])
 
   return (
-
+    <>
+    <ChapterListModal open={OpenChapterListModal} onClose={() => {handleCloseChapterList(null)}} bookID={currentBook} searchQuery={chapterSearchQuery} setSearchQuery={setChapterSearchQuery}/>
     <div className={`
       fixed inset-0 flex justify-center items-center transition-colors ${open ? "visible bg-black/20 z-10" : "invisible"}  
     `}>
@@ -15,7 +37,7 @@ export default function MyBooksModal({ open, onClose }) {
         </button>
         <div className="card-body gap-0 p-[0rem]">
           <div className="w-auto flex justify-center border-b-4 border-[#9ca3af]/20 rounded pb-[12px]">
-            <h1 className="text-3xl text-[#9ca3af]">My Books</h1>
+            <input onChange={(e) => {setSearchQuery(e.target.value)}} value={searchQuery} type="text" placeholder="SEARCH" className="input input-ghost w-full max-w-xs text-center text-3xl bg-transparent text-[#9ca3af] focus:outline-none focus:ring-0" />
           </div>
         <div className="flex flex-wrap w-[100%] h-[100%] overflow-auto p-1 justify-center">
           <div className="card lg:card-side bg-white shadow-xl w-[150px] h-[220px] m-2">
@@ -27,7 +49,7 @@ export default function MyBooksModal({ open, onClose }) {
               <img className="size-full rounded-t-xl" src={cover1.current}/>
               </div>
               <div className="card-actions justify-center">
-                <button onClick={() => {}} className="btn size-full text-gray rounded-t-none">Chapters</button>
+                <button onClick={() => {handleOpenChapterList(0);}} className="btn size-full text-gray rounded-t-none">Chapters</button>
               </div>
             </div>
           </div>
@@ -38,6 +60,6 @@ export default function MyBooksModal({ open, onClose }) {
         </div>
       </div>
     </div>
-
+    </>
   )
 }

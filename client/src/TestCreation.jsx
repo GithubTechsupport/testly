@@ -4,10 +4,11 @@ import MyBooksModal from "./components/MyBooksModal";
 export default function TestCreation() {
 
   const [openMyBooksModal, setOpenMyBooksModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   return (
   <div className="w-full h-screen flex justify-center items-center grow">
-    <MyBooksModal open={openMyBooksModal} onClose={() => setOpenMyBooksModal(false)}/>
+    <MyBooksModal open={openMyBooksModal} onClose={() => {setOpenMyBooksModal(false); setSearchQuery("")}} searchQuery={searchQuery} setSearchQuery={setSearchQuery}/>
     <div className="card w-screen lg:card-side bg-white shadow-xl mx-12 h-[80vh] mt-12">
       <div className="card-body gap-0 p-[1rem]">
         <div className="w-auto flex justify-center border-b-4 border-lightgray rounded">
