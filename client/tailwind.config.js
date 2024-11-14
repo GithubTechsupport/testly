@@ -9,7 +9,7 @@ export default {
       transparent: 'transparent',
       current: 'currentColor',
       'white': '#f1f5f9',
-      'ligthgray': '#cbd5e1',
+      'lightgray': '#e5e7eb',
       'gray': '#64748b',
       'darkgray': '#334155',
       'blackgray': '#0f172a',

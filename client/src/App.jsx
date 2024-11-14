@@ -17,7 +17,7 @@ function App() {
   }, [location.pathname]);
 
   return (
-  <div className="size-full flex flex-col bg-white">
+  <div className="size-full flex flex-col bg-[#e2e8f0]">
   <Navbar/>
   {showNewTest ? (<NewTestButton/>) : (<></>)}
   <Routes>
