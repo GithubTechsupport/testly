@@ -16,7 +16,7 @@ function classNames(...classes) {
 
 export default function Navbar() {
   return (
-    <Disclosure as="nav" className="fixed top-0 right-0 left-0 bg-darkgray">
+    <Disclosure as="nav" className="fixed z-10 top-0 right-0 left-0 bg-darkgray">
       <div className="mx-auto px-2 sm:px-6 lg:px-8">
         <div className="relative flex h-16 items-center justify-between">
           <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">

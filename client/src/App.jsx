@@ -28,7 +28,7 @@ function App() {
   }, [location.pathname]);
 
   return (
-  <div className="size-full flex flex-col bg-[#e2e8f0]">
+  <div className="flex h-full flex-col bg-[#e2e8f0] overflow-auto">
   <MyLibraryContext.Provider value={{myLibrary, setMyLibrary}}>
   <Navbar/>
   {showNewTest ? (<NewTestButton/>) : (<></>)}
