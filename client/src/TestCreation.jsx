@@ -169,7 +169,7 @@ export default function TestCreation() {
 
   
   return (
-    <div className="w-full h-screen flex justify-center items-center grow">
+    <div className="w-full flex flex-wrap justify-center grow">
       <MyBooksModal
         open={openMyBooksModal}
         onClose={() => {
@@ -181,19 +181,19 @@ export default function TestCreation() {
         includedArticles={includedArticles}
         setIncludedArticles={setIncludedArticles}
       />
-      <div className="card w-[45%] lg:card-side bg-white shadow-xl mx-6 h-[80vh] mt-12 min-w-[500px]">
+      <div className="flex-1 card lg:card-side bg-white shadow-xl mx-6 h-[80vh] mt-[80px] min-w-[380px] max-w-[600px]">
         <form className="card-body gap-0 p-[1rem] flex flex-col" onSubmit={handleSubmit}>
-          <div className="w-auto flex justify-center border-b-4 border-lightgray rounded mb-0">
+          <div className="w-auto h-[50px] flex justify-center border-b-4 border-lightgray rounded">
             <input
               type="text"
               placeholder="Test Name"
-              className="input input-ghost w-full max-w-xs text-center text-3xl bg-transparent text-[#9ca3af] focus:outline-none focus:ring-0"
+              className="input h-[50px] leading-[50px] input-ghost w-full max-w-xs text-center text-2xl bg-transparent text-[#9ca3af] focus:outline-none border-none"
             />
           </div>
           <div className="flex w-[100%] h-[100%] flex-col overflow-auto scrollbar-thin">
             {articles.length === 0 && (
               <div className="w-[100%] h-[100%] flex justify-center items-center">
-                <h1 className="text-gray/50 text-2xl font-bold">Select a Book or a Chapter to get started.</h1>
+                <h1 className="text-gray/50 text-lg font-bold">Select a Book or a Chapter to get started.</h1>
               </div>
             )}
             {articles.map((article, index) => (
@@ -275,7 +275,7 @@ export default function TestCreation() {
                 placeholder="Total Qs"
                 value={totalQuestions}
                 onChange={handleTotalQuestionsChange}
-                className="input input-bordered w-32 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="bg-white input input-bordered w-32 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <button type="submit" className="btn btn-primary ml-2">
                 Create
@@ -285,15 +285,15 @@ export default function TestCreation() {
         </form>
       </div>
 
-      <div className="card w-[45%] lg:card-side bg-white shadow-xl mx-6 h-[80vh] mt-12">
-        <div className="card-body gap-0 p-[1rem] min-w-[500px]">
-          <div className="w-auto flex justify-center border-b-4 border-lightgray rounded pb-[12px] mb-0">
-            <h1 className="text-3xl text-[#9ca3af] text-center">Preview</h1>
-          </div>
+      <div className="card flex-1 lg:card-side bg-white shadow-xl mx-6 h-[80vh] mt-[80px] min-w-[380px] max-w-[600px]">
+        <div className="card-body gap-0 p-[1rem] w-full">
+          <h1 className="text-2xl h-[50px] leading-[50px] text-[#9ca3af] flex items-center w-auto justify-center border-b-4 border-lightgray rounded mb-0">
+            Preview
+          </h1>
           <div className="flex w-[100%] h-[100%] divide-x-4 divide-lightgray space-x-[1%]">
             {articles.length === 0 ? (
                 <div className="w-[100%] h-[100%] flex justify-center items-center">
-                  <h1 className="text-gray/50 text-2xl font-bold">No book or article selected</h1>
+                  <h1 className="text-gray/50 text-lg font-bold">No book or article selected</h1>
                 </div>
             ) : (
               <>
