@@ -1,14 +1,14 @@
 import os
 import PyPDF2
 import fitz  # PyMuPDF
-from pymongo import MongoClient
-from dotenv import load_dotenv
+#from pymongo import MongoClient
+#from dotenv import load_dotenv
 
-load_dotenv()
+#load_dotenv()
 
-client = MongoClient(os.getenv("MONGO_URI"))  
-db = client["bookTestMaker"] 
-collection = db["subchapters"] 
+#client = MongoClient(os.getenv("MONGO_URI"))  
+#db = client["bookTestMaker"] 
+#collection = db["subchapters"] 
 
 def extract_filtered_toc(pdf_path):
     max_level = 2
@@ -272,9 +272,7 @@ def split_into_pdfs(partitions, input_pdf, output_dir, book_name="MyBook", book_
     return entries_log
 
 
-book_path="system/Jakki.pdf"
+book_path="Jakki.pdf"
 partitions = extract_filtered_toc(book_path)
 print(partitions)
-split_into_pdfs(partitions, book_path, "system/output")
-
-
+#split_into_pdfs(partitions, book_path, "output")
