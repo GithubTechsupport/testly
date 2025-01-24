@@ -1,6 +1,8 @@
 from pymongo import MongoClient
 import os
 import requests
+from dotenv import load_dotenv
+load_dotenv()
 
 client = MongoClient(os.getenv("MONGO_URI"))
 db = client["bookTestMaker"]
