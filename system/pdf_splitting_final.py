@@ -58,20 +58,6 @@ def extract_filtered_toc(pdf_path, book_name):
 
     return entries
 
-def extract_pdf_range(input_path, output_path, start_page, end_page):
-    with open(input_path, 'rb') as file_in:
-        reader = PyPDF2.PdfReader(file_in)
-        writer = PyPDF2.PdfWriter()
-
-        # Note: PyPDF2 uses zero-based indexing for pages.
-        # If the user says start_page=1, that means index 0 in PyPDF2.
-        # So we subtract 1 to align with zero-based indexing.
-        for page_num in range(start_page - 1, end_page):
-            writer.add_page(reader.pages[page_num])
-
-        with open(output_path, 'wb') as file_out:
-            writer.write(file_out)
-
 def add_chapter_numbers(partitions):
     chapter_counter = 0
     subchapter_counter = 0
@@ -127,6 +113,7 @@ def split_into_pdfs(partitions, pdf_path):
 
 def upload_partitions_to_mongodb(partitions):
     for partition in partitions:
+        del partition["level"]
         try:
             collection.insert_one(partition)
             print(f"Inserted partition: {partition['chapter_title']} into MongoDB")
@@ -139,4 +126,4 @@ if __name__ == "__main__":
     partitions = extract_filtered_toc(book_path, "Jakki")
     add_chapter_numbers(partitions)
     split_into_pdfs(partitions, book_path)
-    #upload_partitions_to_mongodb(partitions)
+    upload_partitions_to_mongodb(partitions)
