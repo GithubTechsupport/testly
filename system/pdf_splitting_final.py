@@ -48,7 +48,6 @@ def extract_filtered_toc(pdf_path, book_name):
         # If deeper than max_level, automatically invalid (or we can just note it's beyond scope)
         title_lower = title.lower().strip()
         if any(term in title_lower for term in non_chapter_terms):
-            print(title)
             if level == 1:
                 parent_invalid = True
             prev = title
@@ -105,25 +104,20 @@ def split_into_pdfs(partitions, pdf_path):
         s3_link = upload_to_s3(output_filepath, bucket_name, output_filename)
         if s3_link:
             partition["s3_link"] = s3_link
+            del partition["level"]
             collection.insert_one(partition)
         else:
             print(f"Failed to upload {output_filename} to S3")
 
     return partitions
 
-def upload_partitions_to_mongodb(partitions):
-    for partition in partitions:
-        del partition["level"]
-        try:
-            collection.insert_one(partition)
-            print(f"Inserted partition: {partition['chapter_title']} into MongoDB")
-        except Exception as e:
-            print(f"Error inserting partition {partition['chapter_title']} into MongoDB: {e}")
-
-
 if __name__ == "__main__":
+    #collection.delete_many({})
+    #bucket_name.object_versions.delete()
+    #exit()
+
     book_path = "Jakki.pdf"
     partitions = extract_filtered_toc(book_path, "Jakki")
     add_chapter_numbers(partitions)
     split_into_pdfs(partitions, book_path)
-    upload_partitions_to_mongodb(partitions)
+    
