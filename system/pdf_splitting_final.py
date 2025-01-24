@@ -37,7 +37,7 @@ def extract_filtered_toc(pdf_path, book_name):
         if level > max_level:
             continue
 
-        if len(entries) != 0 and entries[-1]["sub_title"] == prev:
+        if len(entries) != 0 and entries[-1]["subchapter_title"] == prev:
             entries[-1]["end_page"] = start_page
         if level == 1:
             parent = (title)
@@ -54,7 +54,7 @@ def extract_filtered_toc(pdf_path, book_name):
             prev = title
             continue
         prev = title
-        entries.append({"level": level, "book_name": book_name, "chap_title": parent, "sub_title": title, "start_page":start_page, "end_page":None})
+        entries.append({"level": level, "book_name": book_name, "chapter_title": parent, "subchapter_title": title, "start_page":start_page, "end_page":None})
 
     return entries
 
@@ -101,7 +101,7 @@ def split_into_pdfs(partitions, pdf_path):
     
     for partition in partitions:
         pdf_writer = PyPDF2.PdfWriter()
-        for page_num in range(partition["page_start"], partition["page_end"]):
+        for page_num in range(partition["start_page"] - 1, partition["end_page"]):
             pdf_writer.add_page(pdf_reader.pages[page_num])
         
         safe_chap_title = partition["chapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","")
@@ -135,8 +135,8 @@ def upload_partitions_to_mongodb(partitions):
 
 
 if __name__ == "__main__":
-    book_path = "system/Jakki.pdf"
-    partitions = extract_filtered_toc(book_path, "Jakki", 1)
+    book_path = "Jakki.pdf"
+    partitions = extract_filtered_toc(book_path, "Jakki")
     add_chapter_numbers(partitions)
     split_into_pdfs(partitions, book_path)
     #upload_partitions_to_mongodb(partitions)
