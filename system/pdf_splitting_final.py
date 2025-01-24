@@ -10,9 +10,9 @@ load_dotenv()
 s3_client = boto3.client('s3')
 bucket_name = os.getenv("AWS_BUCKET_NAME")
 
-client = MongoClient(os.getenv("MONGO_URI"))  
+client = MongoClient(os.getenv("MONGO_URI"))
 db = client["bookTestMaker"] 
-collection = db["subchapters"] 
+collection = db["subchapters"]
 
 def extract_filtered_toc(pdf_path, book_name):
     max_level = 2
@@ -61,12 +61,14 @@ def add_chapter_numbers(partitions):
     chapter_counter = 0
     subchapter_counter = 0
     for entry in partitions:
-        entry["chapter_number"] = chapter_counter
-        entry["subchapter_number"] = subchapter_counter
-        subchapter_counter += 1
         if entry["level"] == 1:
             subchapter_counter = 0
             chapter_counter += 1
+        subchapter_counter += 1
+        entry["chapter_number"] = chapter_counter
+        entry["subchapter_number"] = subchapter_counter
+        
+        
         #safe_sub_title = entry["sub_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","").replace("!","")
         #complete_output_path = os.path.join(output_path, safe_sub_title + ".pdf")
         #print(complete_output_path)
@@ -113,11 +115,10 @@ def split_into_pdfs(partitions, pdf_path):
 
 if __name__ == "__main__":
     #collection.delete_many({})
-    #bucket_name.object_versions.delete()
     #exit()
 
     book_path = "Jakki.pdf"
     partitions = extract_filtered_toc(book_path, "Jakki")
     add_chapter_numbers(partitions)
+    print(partitions)
     split_into_pdfs(partitions, book_path)
-    
