@@ -2,8 +2,17 @@ import os
 import PyPDF2
 import fitz  # PyMuPDF
 from dotenv import load_dotenv
+import boto3
+from pymongo import MongoClient
 
 load_dotenv()
+
+s3_client = boto3.client('s3')
+bucket_name = os.getenv("AWS_BUCKET_NAME")
+
+client = MongoClient(os.getenv("MONGO_URI"))  
+db = client["bookTestMaker"] 
+collection = db["subchapters"] 
 
 def extract_filtered_toc(pdf_path, book_name):
     max_level = 2
@@ -63,7 +72,7 @@ def extract_pdf_range(input_path, output_path, start_page, end_page):
         with open(output_path, 'wb') as file_out:
             writer.write(file_out)
 
-def split_into_pdfs(partitions, book_path, output_path):
+def add_chapter_numbers(partitions):
     chapter_counter = 0
     subchapter_counter = 0
     for entry in partitions:
@@ -73,14 +82,61 @@ def split_into_pdfs(partitions, book_path, output_path):
         if entry["level"] == 1:
             subchapter_counter = 0
             chapter_counter += 1
-        safe_sub_title = entry["sub_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","").replace("!","")
-        complete_output_path = os.path.join(output_path, safe_sub_title + ".pdf")
-        print(complete_output_path)
+        #safe_sub_title = entry["sub_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","").replace("!","")
+        #complete_output_path = os.path.join(output_path, safe_sub_title + ".pdf")
+        #print(complete_output_path)
         #extract_pdf_range(book_path, complete_output_path, entry["start_page"], entry["end_page"])
 
-book_name = "Jakki"
-book_path="Jakki.pdf"
-#print(os.getenv("testkey"))
-partitions = extract_filtered_toc(book_path, book_name)
-split_into_pdfs(partitions, book_path, "output")
-print(partitions)
+def upload_to_s3(file_path, bucket_name, object_name):
+    try:
+        s3_client.upload_file(file_path, bucket_name, object_name)
+        return f"https://{bucket_name}.s3.amazonaws.com/{object_name}"
+    except Exception as e:
+        print(f"Error uploading {file_path} to S3: {e}")
+        return None
+
+
+def split_into_pdfs(partitions, pdf_path):
+    pdf_reader = PyPDF2.PdfReader(pdf_path)
+    
+    for partition in partitions:
+        pdf_writer = PyPDF2.PdfWriter()
+        for page_num in range(partition["page_start"], partition["page_end"]):
+            pdf_writer.add_page(pdf_reader.pages[page_num])
+        
+        safe_chap_title = partition["chapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","")
+        safe_sub_title = partition["subchapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","")
+        output_filename = f"{partition['book_name']}_Chapter_{safe_chap_title}_Subchapter_{safe_sub_title}.pdf"
+        output_dir = "/tmp"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        output_filepath = os.path.join(output_dir, output_filename)
+        
+        with open(output_filepath, "wb") as output_pdf:
+            pdf_writer.write(output_pdf)
+        
+        s3_link = upload_to_s3(output_filepath, bucket_name, output_filename)
+        if s3_link:
+            partition["s3_link"] = s3_link
+            collection.insert_one(partition)
+        else:
+            print(f"Failed to upload {output_filename} to S3")
+
+    return partitions
+
+def upload_partitions_to_mongodb(partitions):
+    for partition in partitions:
+        try:
+            collection.insert_one(partition)
+            print(f"Inserted partition: {partition['chapter_title']} into MongoDB")
+        except Exception as e:
+            print(f"Error inserting partition {partition['chapter_title']} into MongoDB: {e}")
+
+
+if __name__ == "__main__":
+    book_path = "system/Jakki.pdf"
+    partitions = extract_filtered_toc(book_path, "Jakki", 1)
+    add_chapter_numbers(partitions)
+    split_into_pdfs(partitions, book_path)
+    #upload_partitions_to_mongodb(partitions)
