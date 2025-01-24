@@ -1,8 +1,11 @@
 import os
 import PyPDF2
 import fitz  # PyMuPDF
+from dotenv import load_dotenv
 
-def extract_filtered_toc(pdf_path):
+load_dotenv()
+
+def extract_filtered_toc(pdf_path, book_name):
     max_level = 2
     # Non-chapter keywords to filter out (all lower case)
     non_chapter_terms = {
@@ -26,9 +29,7 @@ def extract_filtered_toc(pdf_path):
             continue
 
         if len(entries) != 0 and entries[-1]["sub_title"] == prev:
-            entries[-1]["end_page"] = start_page - 1
-            if entries[-1]["end_page"] < entries[-1]["start_page"]:
-                entries[-1]["end_page"] = entries[-1]["start_page"]
+            entries[-1]["end_page"] = start_page
         if level == 1:
             parent = (title)
             parent_invalid = False
@@ -44,7 +45,7 @@ def extract_filtered_toc(pdf_path):
             prev = title
             continue
         prev = title
-        entries.append({"level": level, "chap_title": parent, "sub_title": title, "start_page":start_page, "end_page":None})
+        entries.append({"level": level, "book_name": book_name, "chap_title": parent, "sub_title": title, "start_page":start_page, "end_page":None})
 
     return entries
 
@@ -59,21 +60,27 @@ def extract_pdf_range(input_path, output_path, start_page, end_page):
         for page_num in range(start_page - 1, end_page):
             writer.add_page(reader.pages[page_num])
 
-        try:
-            with open(output_path, 'wb') as file_out:
-                writer.write(file_out)
-        except:
-            return
+        with open(output_path, 'wb') as file_out:
+            writer.write(file_out)
 
 def split_into_pdfs(partitions, book_path, output_path):
-    for entry in partitions[-3:]:
-        safe_sub_title = entry["sub_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","")
+    chapter_counter = 0
+    subchapter_counter = 0
+    for entry in partitions:
+        entry["chapter_number"] = chapter_counter
+        entry["subchapter_number"] = subchapter_counter
+        subchapter_counter += 1
+        if entry["level"] == 1:
+            subchapter_counter = 0
+            chapter_counter += 1
+        safe_sub_title = entry["sub_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","").replace("!","")
         complete_output_path = os.path.join(output_path, safe_sub_title + ".pdf")
         print(complete_output_path)
-        extract_pdf_range(book_path, complete_output_path, entry["start_page"], entry["end_page"])
+        #extract_pdf_range(book_path, complete_output_path, entry["start_page"], entry["end_page"])
 
 book_name = "Jakki"
 book_path="Jakki.pdf"
-partitions = extract_filtered_toc(book_path)
-print(partitions)
+#print(os.getenv("testkey"))
+partitions = extract_filtered_toc(book_path, book_name)
 split_into_pdfs(partitions, book_path, "output")
+print(partitions)

@@ -5,7 +5,7 @@ const cors = require('cors');
 const Question = require('./models/Question'); // Import Question model
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT;
 
 // Middleware
 app.use(cors()); // Allow requests from other origins
