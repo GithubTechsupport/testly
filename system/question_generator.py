@@ -27,6 +27,8 @@ print(subchapters[5])
 
 client = OpenAI(api_key=os.getenv("MODEL_API_KEY"), base_url="https://api.deepseek.com")
 
+system_prompt = 
+
 # response = client.chat.completions.create(
 #     model="deepseek-chat",
 #     messages=[
