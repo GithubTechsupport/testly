@@ -94,6 +94,7 @@ def split_into_pdfs(partitions, pdf_path):
         safe_chap_title = partition["chapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","")
         safe_sub_title = partition["subchapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","")
         output_filename = f"{partition['book_name']}_Chapter_{safe_chap_title}_Subchapter_{safe_sub_title}.pdf"
+        output_filename = output_filename.replace(" ", "_")
         output_dir = "/tmp"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)

@@ -1,15 +1,37 @@
 from pymongo import MongoClient
+from openai import OpenAI
+from PyPDF2 import PdfReader
 import os
 import requests
 from dotenv import load_dotenv
+from io import BytesIO
 load_dotenv()
 
 client = MongoClient(os.getenv("MONGO_URI"))
 db = client["bookTestMaker"]
 collection = db["subchapters"]
 
-for doc in collection.find():
-  pdf_url = doc.get("s3_link")
-  if pdf_url:
-    response = requests.get(pdf_url)
-    print(response.content)
+subchapters = []
+
+for subchapter in collection.find():
+  pdf_url = subchapter.get("s3_link")
+  response = requests.get(pdf_url)
+  pdf_file = BytesIO(response.content)
+  reader = PdfReader(pdf_file)
+  text = ""
+  for i in range(len(reader.pages)):
+      text += reader.pages[i].extract_text()
+  subchapters.append(text)
+
+print(subchapters[5])
+
+client = OpenAI(api_key=os.getenv("MODEL_API_KEY"), base_url="https://api.deepseek.com")
+
+# response = client.chat.completions.create(
+#     model="deepseek-chat",
+#     messages=[
+#         {"role": "system", "content": "You are a helpful assistant"},
+#         {"role": "user", "content": "Hello"},
+#     ],
+#     stream=False
+# )
