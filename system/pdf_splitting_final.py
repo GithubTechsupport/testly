@@ -118,8 +118,8 @@ if __name__ == "__main__":
     #collection.delete_many({})
     #exit()
 
-    book_path = "Jakki.pdf"
-    partitions = extract_filtered_toc(book_path, "Jakki")
+    book_path = "STKboka.pdf"
+    partitions = extract_filtered_toc(book_path, "STKBoka")
     add_chapter_numbers(partitions)
     print(partitions)
     split_into_pdfs(partitions, book_path)
