@@ -1,14 +1,15 @@
 from pymongo import MongoClient
-from openai import OpenAI
 from PyPDF2 import PdfReader
 import os
 import requests
 from dotenv import load_dotenv
 from io import BytesIO
+from timer import function_timer
+from models import DeepseekModel, MistralModel
+
 load_dotenv()
 
 MONGO_client = MongoClient(os.getenv("MONGO_URI"))
-Model_client = OpenAI(api_key=os.getenv("MODEL_API_KEY"), base_url="https://api.deepseek.com")
 db = MONGO_client["bookTestMaker"]
 subchapter_collection = db["subchapters"]
 question_collection = db["questions"] 
@@ -16,15 +17,39 @@ question_collection = db["questions"]
 questions_per_chapter = 8  # Change this value to adjust the number of questions per subchapter
 difficulty_distribution = {"easy": 50, "medium": 25, "hard": 25}  # Adjust the difficulty percentages as needed
 
+@function_timer()
 def delete_all_questions():
+  print("Deleting entries...")
   question_collection.delete_many({})
 
-delete_all_questions()
-
-def get_subchapters(book_name):
+@function_timer()
+def get_subchapter_fast(book_name):
   print("Getting subchapters...")
   subchapters = []
-  for subchapter in subchapter_collection.find({"book_name": book_name}):
+  reader = PdfReader("output\The 3 C’s of Pricing.pdf")
+  text = ""
+  for i in range(len(reader.pages)):
+      text += reader.pages[i].extract_text()
+  subchapters.append(
+    {
+      "book_name": book_name,
+      "chapter_title": "Chapter 10 Pricing Considerations in High-Tech Markets",
+      "subchapter_title": "The 3 C’s of Pricing",
+      "text": text
+    }
+  )
+  print("Subchapters retrieved")
+  return subchapters
+
+@function_timer()
+def get_subchapters(name, singular = False):
+  print("Getting subchapters...")
+  subchapters = []
+  if singular:
+    collection = subchapter_collection.find({"subchapter_title": name})
+  else:
+    collection = subchapter_collection.find({"book_name": name})
+  for subchapter in collection:
     pdf_url = subchapter.get("s3_link")
     book_name = subchapter.get("book_name")
     chapter_title = subchapter.get("chapter_title")
@@ -43,6 +68,7 @@ def get_subchapters(book_name):
         "text": text
       }
     )
+  print("Subchapters retrieved")
   return subchapters
 
 def build_prompt(subchapter, questions_per_chapter, difficulty_distribution):
@@ -55,12 +81,13 @@ def build_prompt(subchapter, questions_per_chapter, difficulty_distribution):
     "Each question should be on the following format:\n"
     "Question|||Alternative A|||Alternative A|||Alternative B|||Alternative C|||Alternative D|||Correct alternative|||Difficulty level \n"
     "Example: What is 2+2?|||3|||1|||4|||0|||C|||easy\n"
-    "Questions are split by a new line\n"
+    "Questions are split by ONLY a new line\n"
     "Please distribute the questions following the specified difficulty distribution:\n"
   )
   for difficulty, percentage in difficulty_distribution.items():
     prompt += f"- {difficulty.capitalize()}: {percentage}% of the questions\n"
   prompt += "\nEnsure that the questions are clear, concise, and relevant to the provided content."
+  prompt += "\nONLY include questions line for line on the exact format mentioned, no headlines, no comments."
   return prompt
 
 def insert_to_mongodb(response, subchapter):
@@ -85,23 +112,21 @@ def insert_to_mongodb(response, subchapter):
       print("Entry done")
       continue
 
-def generate_questions(book_name, questions_per_chapter, difficulty_distribution):
-  subchapters = get_subchapters(book_name)
+@function_timer()
+def generate_questions(model_class, name, questions_per_chapter, difficulty_distribution):
+  subchapters = get_subchapters(name, singular=True) # Change to get local files / only one subchapter
+  model = model_class
   for subchapter in subchapters[:1]:
     try:
-      generated_prompt = build_prompt(subchapter, questions_per_chapter, difficulty_distribution)  # Assumes a helper function exists
-      response = Model_client.chat.completions.create(
-        model="deepseek-chat",
-        messages=[
-          {"role": "system", "content": "You are a helpful educational assistant."},
-          {"role": "user", "content": generated_prompt},
-        ],
-        stream=False
-      )
+      generated_prompt = build_prompt(subchapter, questions_per_chapter, difficulty_distribution)
+      response = model.generate_response(generated_prompt)
     except Exception as e:
       print(f"Error generating questions: {e}")
       exit()
-    insert_to_mongodb(response.choices[0].message.content, subchapter)
-
+    response_text = response.choices[0].message.content
+    print(response_text)
+    insert_to_mongodb(response_text, subchapter)
+    
 if __name__ == '__main__':
-  generate_questions("STKBoka", questions_per_chapter, difficulty_distribution)
+  delete_all_questions()
+  generate_questions(MistralModel(), "10.1 The Two-Sample z Confidence Interval and Test", questions_per_chapter, difficulty_distribution)
