@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from io import BytesIO
 from timer import function_timer
 from models import DeepseekModel, MistralModel
+from pymongo.operations import SearchIndexModel
+from book_embedder import get_text_embedding
 
 load_dotenv()
 
@@ -13,6 +15,7 @@ MONGO_client = MongoClient(os.getenv("MONGO_URI"))
 db = MONGO_client["bookTestMaker"]
 subchapter_collection = db["subchapters"]
 question_collection = db["questions"] 
+chunkEmbedding_collection = db["chunkEmbeddings"]
 
 questions_per_chapter = 8  # Change this value to adjust the number of questions per subchapter
 difficulty_distribution = {"easy": 50, "medium": 25, "hard": 25}  # Adjust the difficulty percentages as needed
@@ -71,6 +74,31 @@ def get_subchapters(name, singular = False):
   print("Subchapters retrieved")
   return subchapters
 
+def retrieve_context(book_name, prompt):
+  """Gets results from a vector search query."""
+  query_embedding = get_text_embedding(prompt)
+  pipeline = [
+      {
+            "$vectorSearch": {
+              "index": "vector_index",
+              "queryVector": query_embedding,
+              "path": "embedding",
+              "exact": True,
+              "limit": 5
+            }
+      }, {
+            "$project": {
+              "_id": 0,
+              "text": 1
+         }
+      }
+  ]
+  results = chunkEmbedding_collection.aggregate(pipeline)
+  array_of_results = []
+  for doc in results:
+      array_of_results.append(doc)
+  return array_of_results
+
 def build_prompt(subchapter, questions_per_chapter, difficulty_distribution):
   prompt = (
     f"Book: {subchapter.get('book_name')}\n"
@@ -88,7 +116,9 @@ def build_prompt(subchapter, questions_per_chapter, difficulty_distribution):
     prompt += f"- {difficulty.capitalize()}: {percentage}% of the questions\n"
   prompt += "\nEnsure that the questions are clear, concise, and relevant to the provided content."
   prompt += "\nONLY include questions line for line on the exact format mentioned, no headlines, no comments."
-  return prompt
+
+  most_relevant_text = retrieve_context(subchapter.get('book_name'), prompt).join("\n")
+  return "Context that might be useful:\n" + most_relevant_text + "\n" + prompt
 
 def insert_to_mongodb(response, subchapter):
   questions = response.split("\n")
