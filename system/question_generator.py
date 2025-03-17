@@ -4,10 +4,12 @@ import os
 import requests
 from dotenv import load_dotenv
 from io import BytesIO
-from timer import function_timer
-from models import DeepseekModel, MistralModel
+from function_timer import function_timer
+from models import DeepseekModel, MistralModel, MistralEmbed
 from pymongo.operations import SearchIndexModel
-from book_embedder import get_text_embedding
+from mistral_tokenizer import MistralTokenizer
+from mongo_commands import delete_collection, get_entry
+import numpy as np
 
 load_dotenv()
 
@@ -17,15 +19,14 @@ subchapter_collection = db["subchapters"]
 question_collection = db["questions"] 
 chunkEmbedding_collection = db["chunkEmbeddings"]
 
-questions_per_chapter = 8  # Change this value to adjust the number of questions per subchapter
+embed_model = MistralEmbed()
+
+RAG_depth = 5
+
+questions_per_chapter = 16  # Change this value to adjust the number of questions per subchapter
 difficulty_distribution = {"easy": 50, "medium": 25, "hard": 25}  # Adjust the difficulty percentages as needed
 
-@function_timer()
-def delete_all_questions():
-  print("Deleting entries...")
-  question_collection.delete_many({})
-
-@function_timer()
+@function_timer
 def get_subchapter_fast(book_name):
   print("Getting subchapters...")
   subchapters = []
@@ -44,7 +45,7 @@ def get_subchapter_fast(book_name):
   print("Subchapters retrieved")
   return subchapters
 
-@function_timer()
+@function_timer
 def get_subchapters(name, singular = False):
   print("Getting subchapters...")
   subchapters = []
@@ -74,37 +75,54 @@ def get_subchapters(name, singular = False):
   print("Subchapters retrieved")
   return subchapters
 
-def retrieve_context(book_name, prompt):
+def average_embedding(subchapter_text, overlap = 50, max_chunk_size = 3064):
+	embeddings = []
+	text = subchapter_text
+	for i in range(0, len(text), max_chunk_size - overlap):
+		chunk = text[i : i + max_chunk_size]
+		embeddings.append(embed_model.generate_response(chunk))
+		
+		if i + max_chunk_size >= len(text):
+				break
+	return np.mean(np.array(embeddings), axis=0)
+
+def retrieve_context(book_name, subchapter_title, subchapter_text):
   """Gets results from a vector search query."""
-  query_embedding = get_text_embedding(prompt)
-  pipeline = [
+  try:
+    query_embedding = average_embedding(subchapter_text)
+    pipeline = [
       {
-            "$vectorSearch": {
-              "index": "vector_index",
-              "queryVector": query_embedding,
-              "path": "embedding",
-              "exact": True,
-              "limit": 5
-            }
+        "$vectorSearch": {
+          "index": "vector_index",
+          "queryVector": query_embedding,
+          "path": "embedding",
+          "filter": { "book_name": book_name, "subchapter_title": { "$ne": subchapter_title } },
+          "exact": True,
+          "limit": RAG_depth
+        }
       }, {
-            "$project": {
-              "_id": 0,
-              "text": 1
-         }
+        "$project": {
+          "_id": 0,
+          "text": 1
+        }
       }
-  ]
-  results = chunkEmbedding_collection.aggregate(pipeline)
-  array_of_results = []
-  for doc in results:
-      array_of_results.append(doc)
-  return array_of_results
+    ]
+    results = chunkEmbedding_collection.aggregate(pipeline)
+    array_of_results = []
+    for doc in results:
+        array_of_results.append(doc)
+    return array_of_results
+  except Exception as e:
+    print(f"Error retrieving context: {e}")
+    exit()
+    return []
 
 def build_prompt(subchapter, questions_per_chapter, difficulty_distribution):
   prompt = (
     f"Book: {subchapter.get('book_name')}\n"
     f"Chapter: {subchapter.get('chapter_title')}\n"
     f"Subchapter: {subchapter.get('subchapter_title')}\n\n"
-    f"Text:\n{subchapter.get('text')}\n"
+    f"Text:\n\n{subchapter.get('text')}\n\n"
     f"Generate {questions_per_chapter} questions based on the above context.\n"
     "Each question should be on the following format:\n"
     "Question|||Alternative A|||Alternative A|||Alternative B|||Alternative C|||Alternative D|||Correct alternative|||Difficulty level \n"
@@ -117,7 +135,11 @@ def build_prompt(subchapter, questions_per_chapter, difficulty_distribution):
   prompt += "\nEnsure that the questions are clear, concise, and relevant to the provided content."
   prompt += "\nONLY include questions line for line on the exact format mentioned, no headlines, no comments."
 
-  most_relevant_text = retrieve_context(subchapter.get('book_name'), prompt).join("\n")
+  context = retrieve_context(subchapter.get('book_name'), subchapter.get('subchapter_title'), prompt)
+  most_relevant_text = ""
+  if len(context) > 0:
+    for entry in context:
+      most_relevant_text += entry["text"] + "\n\n"
   return "Context that might be useful:\n" + most_relevant_text + "\n" + prompt
 
 def insert_to_mongodb(response, subchapter):
@@ -142,21 +164,21 @@ def insert_to_mongodb(response, subchapter):
       print("Entry done")
       continue
 
-@function_timer()
+@function_timer
 def generate_questions(model_class, name, questions_per_chapter, difficulty_distribution):
-  subchapters = get_subchapters(name, singular=True) # Change to get local files / only one subchapter
+  subchapters = get_subchapters(name) # Change to get local files / only one subchapter
   model = model_class
-  for subchapter in subchapters[:1]:
+  print("Generating questions...")
+  for subchapter in subchapters[:3]:
     try:
       generated_prompt = build_prompt(subchapter, questions_per_chapter, difficulty_distribution)
       response = model.generate_response(generated_prompt)
     except Exception as e:
       print(f"Error generating questions: {e}")
       exit()
-    response_text = response.choices[0].message.content
-    print(response_text)
-    insert_to_mongodb(response_text, subchapter)
-    
+    insert_to_mongodb(response, subchapter)
+  print("Questions generated")
+
 if __name__ == '__main__':
-  delete_all_questions()
-  generate_questions(MistralModel(), "10.1 The Two-Sample z Confidence Interval and Test", questions_per_chapter, difficulty_distribution)
+  book_name = "Modern Mathematical Statistics with Applications Third Edition"
+  generate_questions(MistralModel(), book_name, questions_per_chapter, difficulty_distribution)

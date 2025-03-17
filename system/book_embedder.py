@@ -1,72 +1,107 @@
-from mistralai import Mistral
 from PyPDF2 import PdfReader
 from dotenv import load_dotenv
 import requests
 import numpy as np
 import os
-from getpass import getpass
-import time
 from pymongo import MongoClient
+from models import MistralEmbed, MistralOCR
+from function_timer import function_timer
+from io import BytesIO
+from mistral_tokenizer import MistralTokenizer
+from mongo_commands import delete_collection, get_entry
 
 load_dotenv()
 
 MONGO_client = MongoClient(os.getenv("MONGO_URI"))
 db = MONGO_client["bookTestMaker"]
-collection = db["chunkEmbeddings"]
+embedding_collection = db["chunkEmbeddings"]
+subchapter_collection = db["subchapters"]
+mistral_tokenizer = MistralTokenizer()
 
-client = Mistral(api_key=os.getenv("MISTRAL_KEY"))
+OCR_model = MistralOCR()
 
-chunk_size = 2048
+max_chunk_size = 3064
 
-def function_timer(func):
-    def wrapper(*args, **kwargs):
-      start_time = time.time()
-      result = func(*args, **kwargs)
-      end_time = time.time()
-      print(f"Function {func.__name__} took {end_time - start_time} seconds")
-      return result
-    return wrapper
-
-@function_timer
-def delete_all_chunks():
-  print("Deleting entries...")
-  collection.delete_many({})
-
-@function_timer
-def extract_chunks_from_pdf(pdf_path, chunk_size=chunk_size):
-	reader = PdfReader(pdf_path)
-	text = ""
-	for page in reader.pages:
-		text += page.extract_text() + "\n"
-	chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+def chunk_text(text, overlap = 50, max_chunk_size = max_chunk_size):
+	#tokens = mistral_tokenizer.encode(text)  # Convert text to tokens
+	chunks = []
+	
+	for i in range(0, len(text), max_chunk_size - overlap):
+		chunk = text[i : i + max_chunk_size]
+		chunks.append(chunk)
+		
+		if i + max_chunk_size >= len(text):
+				break
+	
 	return chunks
 
-def get_text_embedding(input):
-	embeddings_batch_response = client.embeddings.create(
-		model="mistral-embed",
-		inputs=input
-	)
-	time.sleep(0.17)
-	return embeddings_batch_response.data[0].embedding
+@function_timer
+def test_ocr():
+	entry = get_entry(subchapter_collection, "subchapter_title", "1.4 Measures of Variability")
+	url = entry.get("s3_link")
+	response = OCR_model.generate_response(url)
+	print(response)
+
+@function_timer
+def get_chunks(book_name, ocr = False):
+	print("Getting subchapters...")
+	chunks = []
+	subchapters = []
+	collection = subchapter_collection.find({"book_name": book_name})
+	total = subchapter_collection.count_documents({"book_name": book_name})
+	print("Subchapters retrieved")
+	print("Creating chunks...")
+	for i, subchapter in enumerate(collection, start=0):
+		subchapter_title = subchapter.get("subchapter_title")
+		pdf_url = subchapter.get("s3_link")
+		text = ""
+		if ocr:
+			response = OCR_model.generate_response(pdf_url)
+			text = response
+		else:
+			response = requests.get(pdf_url)
+			pdf_file = BytesIO(response.content)
+			reader = PdfReader(pdf_file)
+			for j in range(len(reader.pages)):
+				text += reader.pages[j].extract_text()
+		current_chunks = chunk_text(text)
+		chunks.extend(current_chunks)
+		subchapters.extend([subchapter_title]*len(current_chunks))
+		print(f"{i} / {total}", end="\r")
+	print("Chunks created")
+	return chunks, subchapters
 
 @function_timer
 def all_text_embeddings(chunks):
-	return np.array([get_text_embedding(chunk) for chunk in chunks])
+	print("Embedding chunks...")
+	total = len(chunks)
+	model = MistralEmbed()
+	embeddings_list = []
+	for i, chunk in enumerate(chunks, start=0):
+		try:
+			embeddings_list.append(model.generate_response(chunk))
+		except Exception as e:
+			print(f"Error embedding chunk: {e}\nChunk: {chunk}")
+			continue
+		print(f"{i} / {total}", end="\r")
+	print("Chunks embedded")
+	return embeddings_list
 
 @function_timer
-def insert_into_mongo(chunks, embeddings, book):
+def insert_into_mongo(chunks, embeddings, subchapters, book_name):
+	print("Inserting into MongoDB...")
 	docs_to_insert = [{
-    "book": book,
+    "book_name": book_name,
+		"subchapter_title": subchapter,
 		"text": chunk,
-		"embedding": embedding.tolist()  # Convert numpy array to list
-	} for (chunk, embedding) in zip(chunks, embeddings)]
-	result = collection.insert_many(docs_to_insert)
+		"embedding": embedding  
+	} for (chunk, embedding, subchapter) in zip(chunks, embeddings, subchapters)]
+	result = embedding_collection.insert_many(docs_to_insert)
+	print("Inserted into MongoDB")
 	return result
 
 if __name__ == "__main__":
-	delete_all_chunks()
-	chunks = extract_chunks_from_pdf("Jakki.pdf")
-	print(len(chunks))
-
+	book_name = "Modern Mathematical Statistics with Applications Third Edition"
+	chunks, subchapters = get_chunks(book_name)
 	embeddings = all_text_embeddings(chunks)
-	insert_into_mongo(chunks, embeddings, "Marketing of High-technology Products and Innovations")
+	insert_into_mongo(chunks, embeddings, subchapters, book_name)
