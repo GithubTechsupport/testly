@@ -8,7 +8,7 @@ from models import MistralEmbed, MistralOCR
 from function_timer import function_timer
 from io import BytesIO
 from mistral_tokenizer import MistralTokenizer
-from mongo_commands import delete_collection, get_entry
+from mongo_commands import delete_collection, get_entry_single
 
 load_dotenv()
 
@@ -37,7 +37,7 @@ def chunk_text(text, overlap = 50, max_chunk_size = max_chunk_size):
 
 @function_timer
 def test_ocr():
-	entry = get_entry(subchapter_collection, "subchapter_title", "1.4 Measures of Variability")
+	entry = get_entry_single(subchapter_collection, "subchapter_title", "1.4 Measures of Variability")
 	url = entry.get("s3_link")
 	response = OCR_model.generate_response(url)
 	print(response)
@@ -101,6 +101,7 @@ def insert_into_mongo(chunks, embeddings, subchapters, book_name):
 	return result
 
 if __name__ == "__main__":
+	delete_collection(embedding_collection)
 	book_name = "Modern Mathematical Statistics with Applications Third Edition"
 	chunks, subchapters = get_chunks(book_name)
 	embeddings = all_text_embeddings(chunks)

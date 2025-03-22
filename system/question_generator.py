@@ -8,7 +8,7 @@ from function_timer import function_timer
 from models import DeepseekModel, MistralModel, MistralEmbed
 from pymongo.operations import SearchIndexModel
 from mistral_tokenizer import MistralTokenizer
-from mongo_commands import delete_collection, get_entry
+from mongo_commands import delete_collection, get_entry_single, delete_entries
 import numpy as np
 
 load_dotenv()
@@ -23,7 +23,7 @@ embed_model = MistralEmbed()
 
 RAG_depth = 5
 
-questions_per_chapter = 16  # Change this value to adjust the number of questions per subchapter
+questions_per_chapter = 8  # Change this value to adjust the number of questions per subchapter
 difficulty_distribution = {"easy": 50, "medium": 25, "hard": 25}  # Adjust the difficulty percentages as needed
 
 @function_timer
@@ -53,7 +53,7 @@ def get_subchapters(name, singular = False):
     collection = subchapter_collection.find({"subchapter_title": name})
   else:
     collection = subchapter_collection.find({"book_name": name})
-  for subchapter in collection:
+  for subchapter in collection[0:1]:
     pdf_url = subchapter.get("s3_link")
     book_name = subchapter.get("book_name")
     chapter_title = subchapter.get("chapter_title")
@@ -84,7 +84,7 @@ def average_embedding(subchapter_text, overlap = 50, max_chunk_size = 3064):
 		
 		if i + max_chunk_size >= len(text):
 				break
-	return np.mean(np.array(embeddings), axis=0)
+	return np.mean(np.array(embeddings), axis=0).tolist()
 
 def retrieve_context(book_name, subchapter_title, subchapter_text):
   """Gets results from a vector search query."""
@@ -136,11 +136,13 @@ def build_prompt(subchapter, questions_per_chapter, difficulty_distribution):
   prompt += "\nONLY include questions line for line on the exact format mentioned, no headlines, no comments."
 
   context = retrieve_context(subchapter.get('book_name'), subchapter.get('subchapter_title'), prompt)
+  #context = []
   most_relevant_text = ""
   if len(context) > 0:
     for entry in context:
       most_relevant_text += entry["text"] + "\n\n"
   return "Context that might be useful:\n" + most_relevant_text + "\n" + prompt
+  #return prompt
 
 def insert_to_mongodb(response, subchapter):
   questions = response.split("\n")
@@ -169,7 +171,7 @@ def generate_questions(model_class, name, questions_per_chapter, difficulty_dist
   subchapters = get_subchapters(name) # Change to get local files / only one subchapter
   model = model_class
   print("Generating questions...")
-  for subchapter in subchapters[:3]:
+  for subchapter in subchapters:
     try:
       generated_prompt = build_prompt(subchapter, questions_per_chapter, difficulty_distribution)
       response = model.generate_response(generated_prompt)
@@ -180,5 +182,6 @@ def generate_questions(model_class, name, questions_per_chapter, difficulty_dist
   print("Questions generated")
 
 if __name__ == '__main__':
+  delete_collection(question_collection)
   book_name = "Modern Mathematical Statistics with Applications Third Edition"
   generate_questions(MistralModel(), book_name, questions_per_chapter, difficulty_distribution)

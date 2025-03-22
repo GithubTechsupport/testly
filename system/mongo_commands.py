@@ -11,8 +11,19 @@ def delete_collection(collection):
   collection.delete_many({})
   print("Collection deleted")
 
-def get_entry(collection, field, value):
+def delete_entries(collection, field, value):
+  print("Deleting collection...")
+  collection.delete_many({field: value})
+  print("Collection deleted")
+
+def get_entry_single(collection, field, value):
   print("Getting entry...")
   entry = collection.find_one({field: value})
   print("Entry retrieved")
   return entry
+
+def get_entries(collection, field, value):
+  print("Getting entries...")
+  entries = collection.find({field: value})
+  print("Entries retrieved")
+  return entries

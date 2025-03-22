@@ -54,7 +54,7 @@ def extract_filtered_toc(pdf_path, book_name):
             continue
         prev = title
         entries.append({"level": level, "book_name": book_name, "chapter_title": parent, "subchapter_title": title, "start_page":start_page, "end_page":None})
-
+    print("toc extraction complete")
     return entries
 
 def add_chapter_numbers(partitions):
@@ -73,9 +73,11 @@ def add_chapter_numbers(partitions):
         #complete_output_path = os.path.join(output_path, safe_sub_title + ".pdf")
         #print(complete_output_path)
         #extract_pdf_range(book_path, complete_output_path, entry["start_page"], entry["end_page"])
+    print("Added chapter and subchapter numbers")
 
 def upload_to_s3(file_path, bucket_name, object_name):
     try:
+        print(f"Uploading {file_path} to S3...")
         s3_client.upload_file(file_path, bucket_name, object_name)
         return f"https://{bucket_name}.s3.amazonaws.com/{object_name}"
     except Exception as e:
@@ -84,6 +86,8 @@ def upload_to_s3(file_path, bucket_name, object_name):
 
 
 def split_into_pdfs(partitions, pdf_path):
+    print("Splitting PDF into subchapters...")
+    print(f"Total subchapters: {len(partitions)}")
     pdf_reader = PyPDF2.PdfReader(pdf_path)
     
     for partition in partitions:
@@ -111,6 +115,7 @@ def split_into_pdfs(partitions, pdf_path):
             collection.insert_one(partition)
         else:
             print(f"Failed to upload {output_filename} to S3")
+        print(f"Uploaded {output_filename} to S3")
 
     return partitions
 
@@ -118,7 +123,7 @@ if __name__ == "__main__":
     #collection.delete_many({})
     #exit()
 
-    book_path = "STKboka.pdf"
-    partitions = extract_filtered_toc(book_path, "STKBoka")
+    book_path = "PrinciplesOfMacroeconomics.pdf"
+    partitions = extract_filtered_toc(book_path, "Principles of Macroeconomics 3e")
     add_chapter_numbers(partitions)
     split_into_pdfs(partitions, book_path)
