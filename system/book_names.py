@@ -1,1 +1,0 @@
-book_names = ["Marketing of High-technology Products and Innovations"]
