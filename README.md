@@ -1,48 +1,83 @@
-# Project Overview
+# Testly Repository
 
-This repository is organized into three main folders:
+This repository is organized into three main parts:
 
-- **client (Frontend)**  
-  Contains user-facing components and scripts to process book files before sending data to the backend or AI system.  
-  - **book_processing/**  
-    - `extract_text.py`  
-      • Input: PDF, EPUB or TXT files  
-      • Function: Extracts raw text from book files  
-    - `summarize.py`  
-      • Input: Raw text files  
-      • Function: Generates concise summaries of extracted text  
-    - `convert_to_audio.py`  
-      • Input: Summarized text files  
-      • Function: Converts text summaries to audio (MP3/WAV)  
+## 1. Client (`client/`)
+- **Description:** Web frontend built with React.
+- **Status:** Not fully implemented. No further details provided.
 
-- **server (Backend)**  
-  Implements RESTful API endpoints to receive processed data from the client, manage storage, and forward requests to the AI system.  
-  - `app.py` – Main Flask/FastAPI application  
-  - `routes/` – Endpoint definitions  
-  - `models/` – Database schema and ORM models  
+## 2. Server (`server/`)
+- **Description:** Web backend built with Express.
+- **Status:** Not fully implemented. No further details provided.
 
-- **system (AI Model Orchestrator)**  
-  Orchestrates AI-model-specific workflows, handles prompt engineering, and manages model inference.  
-  - `pipeline/` – Scripts that prepare inputs, run the model, and post-process outputs  
-  - `config/` – Model configuration files  
+## 3. System (`system/`)
+- **Description:** Python-based AI processing system for textbook handling and question generation.
+- **Structure:**  
+  - `book_processing/`: Contains core scripts for PDF uploading, embedding, and question generation.
+
+### Book Processing Overview
+
+The `book_processing` folder includes the following main functionalities:
+
+- **PDF Uploading:** Splits textbooks into subchapters and uploads them to S3 and MongoDB.
+- **PDF Embedding:** Chunks subchapter text and generates vector embeddings for semantic search.
+- **Question Generation:** Uses the latest Mistral Large model to generate exam questions from textbook content.
+
+### Current Model
+
+- The system uses the **Mistral Large (latest)** model for question generation and embedding.
 
 ---
 
-## Setup & Installation
+## Setup Instructions
 
-1. Create and activate a virtual environment (optional, but recommended)  
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate   # macOS/Linux
-   .venv\Scripts\activate      # Windows
-   ```
+### 1. Activate Virtual Environment
 
-2. Install all required dependencies  
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-3. Run individual components as needed:  
-   - Client scripts: `python client/book_processing/extract_text.py --input path/to/book.pdf --output output.txt`  
-   - Backend server: `python server/app.py`  
-   - AI system pipeline: `python system/pipeline/run_model.py --config system/config/model.yaml`
+### 2. Install Requirements
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Main Scripts & Inputs
+
+### 1. `split_pdf_and_upload.py`
+- **Purpose:** Splits a PDF into subchapters, uploads each to S3, and stores metadata in MongoDB.
+- **Inputs:**
+  - `book_file_name`: The key for the book in `book_titles.dictionary`.
+  - `book_title`: The actual book title.
+  - `book_path`: Path to the PDF file.
+- **Usage:**  
+  Edit the `__main__` section to set the desired `book_file_name` and run the script.
+
+### 2. `book_embedder.py`
+- **Purpose:** Downloads subchapter PDFs, extracts text, chunks it, generates embeddings, and stores them in MongoDB.
+- **Inputs:**
+  - `book_name`: Title of the book as stored in MongoDB.
+  - Optional: OCR mode for extracting text.
+- **Usage:**  
+  Edit the `__main__` section to set the desired `book_name` and run the script.
+
+### 3. `question_generator.py`
+- **Purpose:** Retrieves subchapter text, builds prompts, generates questions using the Mistral model, evaluates them, and stores them in MongoDB.
+- **Inputs:**
+  - `book_name`: Title of the book as stored in MongoDB.
+  - `questions_per_chapter`: Number of questions to generate per subchapter.
+  - `difficulty_distribution`: Distribution of question difficulties.
+- **Usage:**  
+  Edit the `__main__` section to set the desired `book_name` and parameters, then run the script.
+
+---
+
+## Notes
+
+- Ensure your `.env` file is configured with the necessary AWS and MongoDB credentials.
+- All scripts are located in `system/book_processing/`.
+- The client and server folders are placeholders and not yet implemented.
