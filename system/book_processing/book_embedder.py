@@ -9,6 +9,8 @@ from function_timer import function_timer
 from io import BytesIO
 from mistral_tokenizer import MistralTokenizer
 from mongo_commands import delete_collection, get_entry_single
+from bson import ObjectId
+
 
 load_dotenv()
 
@@ -16,6 +18,7 @@ Mongo_client = MongoClient(os.getenv("MONGO_URI"))
 db = Mongo_client["bookTestMaker"]
 embedding_collection = db["chunkEmbeddings"]
 subchapter_collection = db["subchapters"]
+books_collection = db["books"]
 mistral_tokenizer = MistralTokenizer()
 
 OCR_model = MistralOCR()
@@ -44,15 +47,21 @@ def test_ocr():
 	print(response)
 
 @function_timer
-def get_chunks(book_name, ocr = False):
+def get_chunks(book_name, id = None,  ocr = False):
 	print("Getting subchapters...")
 	chunks = []
 	subchapters = []
-	collection = subchapter_collection.find({"book_name": book_name})
-	total = subchapter_collection.count_documents({"book_name": book_name})
+	subchapter_ids = None
+	if id:
+		subchapter_ids = books_collection.find_one({ "_id": ObjectId(id) })["subchapter_ids"]
+	else:
+		subchapter_ids = books_collection.find_one({ "book_title": book_name })["subchapter_ids"]
+
+	docs = list(subchapter_collection.find({"_id": {"$in": subchapter_ids}}))
+	total = len(docs)
 	print("Subchapters retrieved")
 	print("Creating chunks...")
-	for i, subchapter in enumerate(collection, start=0):
+	for i, subchapter in enumerate(docs, start=0):
 		subchapter_title = subchapter.get("subchapter_title")
 		pdf_url = subchapter.get("s3_link")
 		text = ""
@@ -92,7 +101,7 @@ def all_text_embeddings(chunks):
 def insert_into_mongo(chunks, embeddings, subchapters, book_name):
 	print("Inserting into MongoDB...")
 	docs_to_insert = [{
-    "book_name": book_name,
+		"book_name": book_name,
 		"subchapter_title": subchapter,
 		"text": chunk,
 		"embedding": embedding  
@@ -103,7 +112,7 @@ def insert_into_mongo(chunks, embeddings, subchapters, book_name):
 
 if __name__ == "__main__":
 	delete_collection(embedding_collection)
-	book_name = "Modern Mathematical Statistics with Applications Third Edition"
+	book_name = "The Elements of Statistical Learning"
 	chunks, subchapters = get_chunks(book_name)
 	embeddings = all_text_embeddings(chunks)
 	insert_into_mongo(chunks, embeddings, subchapters, book_name)

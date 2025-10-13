@@ -1,6 +1,6 @@
 import os
 import PyPDF2
-import fitz  # PyMuPDF
+import fitz 
 from dotenv import load_dotenv
 import boto3
 from pymongo import MongoClient
@@ -16,6 +16,7 @@ bucket_name = os.getenv("AWS_BUCKET_NAME")
 Mongo_client = MongoClient(os.getenv("MONGO_URI"))
 db = Mongo_client["bookTestMaker"] 
 subchapter_collection = db["subchapters"]
+books_collection = db["books"]
 
 exclude_terms = {
         "appendix", "abstract", "preface", "index",
@@ -29,6 +30,7 @@ def create_subchapter_partitions(pdf_path, book_name, exclude_terms=exclude_term
     max_level = 2
     # Non-chapter keywords to filter out (all lower case)
     doc = fitz.open(pdf_path)
+
     toc = doc.get_toc()
     # First pass: record all entries and determine initial invalidity
     partitions = []
@@ -65,6 +67,7 @@ def add_chapter_numbers(partitions):
     print("Adding chapter and subchapter numbers...")
     chapter_counter = 0
     subchapter_counter = 0
+
     for entry in partitions:
         if entry["level"] == 1:
             subchapter_counter = 0
@@ -72,12 +75,6 @@ def add_chapter_numbers(partitions):
         subchapter_counter += 1
         entry["chapter_number"] = chapter_counter
         entry["subchapter_number"] = subchapter_counter
-        
-        
-        #safe_sub_title = entry["sub_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","").replace("!","")
-        #complete_output_path = os.path.join(output_path, safe_sub_title + ".pdf")
-        #print(complete_output_path)
-        #extract_pdf_range(book_path, complete_output_path, entry["start_page"], entry["end_page"])
     print("Added chapter and subchapter numbers")
 
 def upload_to_s3(file_path, bucket_name, object_name):
@@ -90,17 +87,22 @@ def upload_to_s3(file_path, bucket_name, object_name):
         exit()
 
 
-def split_and_upload_pdfs(partitions, pdf_path):
+def split_and_upload_pdfs(book_title, partitions, pdf_path):
     print("Splitting PDF into subchapters...")
     pdf_reader = PyPDF2.PdfReader(pdf_path)
+    subchapter_ids = []
+    subchapter_infos = []
+
+    chapter_infos = []
+    chapter_first_index = 0
     
-    for partition in partitions:
+    for i, partition in enumerate(partitions):
         pdf_writer = PyPDF2.PdfWriter()
         for page_num in range(partition["start_page"] - 1, partition["end_page"]):
             pdf_writer.add_page(pdf_reader.pages[page_num])
         
-        safe_chap_title = partition["chapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","")
-        safe_sub_title = partition["subchapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","")
+        safe_chap_title = partition["chapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","").replace(">","-").replace("<","-")
+        safe_sub_title = partition["subchapter_title"].replace(":", "-").replace("/", "-").replace("\\", "-").replace("?","").replace(">","-").replace("<","-")
         output_filename = f"{partition['book_name']}_Chapter_{safe_chap_title}_Subchapter_{safe_sub_title}.pdf"
         output_filename = output_filename.replace(" ", "_")
         output_dir = "/tmp"
@@ -117,50 +119,40 @@ def split_and_upload_pdfs(partitions, pdf_path):
             try: 
                 partition["s3_link"] = s3_link
                 del partition["level"]
-                subchapter_collection.insert_one(partition)
+                result = subchapter_collection.insert_one(partition)
+                subchapter_id = result.inserted_id
+                subchapter_ids.append(subchapter_id)
+                subchapter_infos.append([partition["subchapter_title"], partition["start_page"]])
             except Exception as e:
                 print(f"Failed to upload {output_filename} to MongoDB: {e}")
-        print(f"Uploaded {output_filename} to S3")
+        print(f"Uploaded {output_filename} to S3 and MongoDB")
+
+        if i != len(partitions)-1:
+            if partitions[i+1]["chapter_title"] != partition["chapter_title"]:
+                chapter_infos.append([partition["chapter_title"], chapter_first_index, i])
+                chapter_first_index = i + 1
+        else:
+            chapter_infos.append([partition["chapter_title"], chapter_first_index, i])
+
+    try:
+        print("Uploading book info...")
+        book_info = {
+            "book_title": book_title,
+            "subchapter_ids": subchapter_ids,
+            "subchapter_infos": subchapter_infos,
+            "chapter_infos": chapter_infos
+        }
+        books_collection.insert_one(book_info)
+    except Exception as e:
+        print(f"Failed to upload {book_title} to MongoDB: {e}")        
 
     return partitions
 
-def upload_book_info_to_mongo(book_title, partitions):
-    print("Uploading book info to MongoDB...")
-    try:
-        book_info = {
-            "book_title": book_title,
-        }
-        db["bookInfo"].insert_one(book_info)
-        print("Book info uploaded to MongoDB")
-    except Exception as e:
-        print(f"Failed to upload book info to MongoDB: {e}")
-
-def create_book_info(book_title, partitions):
-    book_info = {
-        "book_title": book_title,
-        "subchapters": partitions
-    }
-    chapters = []
-    chapter_subchapters = {}
-    for partition in partitions:
-        chapter = partition["chapter_title"]
-        subchapter = partition["subchapter_title"]
-        if chapter not in chapter_subchapters:
-            chapters.append(chapter)
-            chapter_subchapters[chapter] = []
-        chapter_subchapters[chapter].append(subchapter)
-    book_info["chapters"] = chapters
-    book_info["chapter_subchapters"] = chapter_subchapters
-    return book_info
-
-
 if __name__ == "__main__":
-    book_file_name = "0"
+    book_file_name = "4"
     book_title = book_titles.dictionary[book_file_name]
     book_path = f"..\\textbooks\{book_file_name}.pdf"
     partitions = create_subchapter_partitions(book_path, book_title)
-    print(partitions)
-    exit()
     add_chapter_numbers(partitions)
-    split_and_upload_pdfs(partitions, book_path)
-    #upload_book_info_to_mongo(book_title, partitions)
+    split_and_upload_pdfs(book_title, partitions, book_path)
+
