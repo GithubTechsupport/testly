@@ -7,4 +7,6 @@ dictionary = {
   "New Korean Wave: Transnational Cultural Power in the Age of Social Media":"2",
   "3":"Principles of Macroeconomics 3e",
   "Principles of Macroeconomics 3e":"3",
+  "4":"The Elements of Statistical Learning",
+  "The Elements of Statistical Learning": "4",
 }

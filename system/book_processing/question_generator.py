@@ -12,6 +12,8 @@ from mongo_commands import delete_collection, get_entry_single, delete_entries
 import numpy as np
 import json
 from operator import itemgetter
+from bson import ObjectId
+import book_titles
 
 load_dotenv()
 
@@ -19,6 +21,7 @@ Mongo_client = MongoClient(os.getenv("MONGO_URI"))
 db = Mongo_client["bookTestMaker"]
 subchapter_collection = db["subchapters"]
 question_collection = db["questions"]
+books_collection = db["books"]
 chunkEmbedding_collection = db["chunkEmbeddings"]
 mistral_tokenizer = MistralTokenizer()
 
@@ -31,11 +34,16 @@ questions_per_chapter = 8  # Change this value to adjust the number of questions
 difficulty_distribution = {"easy ": 33, "medium": 33, "hard": 33}  # Adjust the difficulty percentages as needed
 
 @function_timer
-def get_subchapters(name):
+def get_subchapters(name, id=None):
   print("Getting subchapters...")
   subchapters = []
-  collection = subchapter_collection.find({"book_name": name})
-  for subchapter in collection[8:9]:
+  subchapter_ids = None
+  if id:
+    subchapter_ids = books_collection.find_one({ "_id": ObjectId(id) })["subchapter_ids"]
+  else:
+    subchapter_ids = books_collection.find_one({ "book_title": name })["subchapter_ids"]
+  docs = list(subchapter_collection.find({"_id": {"$in": subchapter_ids}}))
+  for subchapter in docs[9:10]:
     pdf_url = subchapter.get("s3_link")
     book_name = subchapter.get("book_name")
     chapter_title = subchapter.get("chapter_title")
@@ -224,12 +232,11 @@ def generate_questions(model_class, name, questions_per_chapter, difficulty_dist
       print(f"Error generating questions: {e}")
       exit()
     print(evaluate_response(response))
-    exit()
     questions = evaluate_response(response)
     insert_to_mongodb(questions, subchapter)
   print("Questions generated")
 
 if __name__ == '__main__':
   delete_collection(question_collection)
-  book_name = "Modern Mathematical Statistics with Applications Third Edition"
+  book_name = "The Elements of Statistical Learning"
   generate_questions(MistralModel(), book_name, questions_per_chapter, difficulty_distribution)
