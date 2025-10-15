@@ -65,8 +65,7 @@ class QuestionGenerator:
     @function_timer
     def get_subchapters(
         self, 
-        book_name: Optional[str] = None, 
-        book_id: Optional[str] = None,
+        book_id: ObjectId,
         limit: Optional[int] = None,
         offset: int = 0
     ) -> List[Dict]:
@@ -74,7 +73,6 @@ class QuestionGenerator:
         Retrieve subchapter content from MongoDB.
         
         Args:
-            book_name: Name of the book
             book_id: MongoDB ObjectId of the book
             limit: Maximum number of subchapters to retrieve
             offset: Starting index for retrieval
@@ -85,12 +83,7 @@ class QuestionGenerator:
         print("Getting subchapters...")
         
         # Get subchapter IDs
-        if book_id:
-            book_doc = self.books_collection.find_one({"_id": ObjectId(book_id)})
-        elif book_name:
-            book_doc = self.books_collection.find_one({"book_title": book_name})
-        else:
-            raise ValueError("Must provide either book_name or book_id")
+        book_doc = self.books_collection.find_one({"_id": book_id})
         
         if not book_doc:
             raise ValueError("Book not found")
@@ -108,6 +101,7 @@ class QuestionGenerator:
         
         for subchapter in docs:
             pdf_url = subchapter.get("s3_link")
+            book_id = subchapter.get("book_id")
             book_name = subchapter.get("book_name")
             chapter_title = subchapter.get("chapter_title")
             subchapter_title = subchapter.get("subchapter_title")
@@ -124,6 +118,7 @@ class QuestionGenerator:
                 text += page.extract_text()
             
             subchapters.append({
+                "book_id": book_id,
                 "book_name": book_name,
                 "chapter_title": chapter_title,
                 "subchapter_title": subchapter_title,
@@ -164,7 +159,7 @@ class QuestionGenerator:
     
     def retrieve_context(
         self, 
-        book_name: str, 
+        book_id: ObjectId,
         subchapter_title: str, 
         subchapter_text: str
     ) -> List[Dict]:
@@ -189,7 +184,7 @@ class QuestionGenerator:
                         "queryVector": query_embedding,
                         "path": "embedding",
                         "filter": {
-                            "book_name": book_name,
+                            "book_id": book_id,
                             "subchapter_title": {"$ne": subchapter_title}
                         },
                         "exact": True,
@@ -261,7 +256,7 @@ class QuestionGenerator:
         
         # Add RAG context
         context = self.retrieve_context(
-            subchapter.get('book_name'),
+            subchapter.get('book_id'),
             subchapter.get('subchapter_title'),
             subchapter.get('text')
         )
@@ -320,6 +315,7 @@ class QuestionGenerator:
         for question in questions:
             try:
                 self.question_collection.insert_one({
+                    "book_id": subchapter.get("book_id"),
                     "book_name": subchapter.get("book_name"),
                     "chapter_title": subchapter.get("chapter_title"),
                     "subchapter_title": subchapter.get("subchapter_title"),
@@ -336,8 +332,7 @@ class QuestionGenerator:
     @function_timer
     def generate_questions(
         self, 
-        book_name: Optional[str] = None,
-        book_id: Optional[str] = None,
+        book_id: ObjectId,
         limit: Optional[int] = None,
         offset: int = 0
     ) -> None:
@@ -345,12 +340,11 @@ class QuestionGenerator:
         Generate questions for all subchapters in a book.
         
         Args:
-            book_name: Name of the book
             book_id: MongoDB ObjectId of the book
             limit: Maximum number of subchapters to process
             offset: Starting index
         """
-        subchapters = self.get_subchapters(book_name, book_id, limit, offset)
+        subchapters = self.get_subchapters(book_id, limit, offset)
         
         print("Generating questions...")
         for subchapter in subchapters:

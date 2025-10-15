@@ -238,16 +238,23 @@ class PDFProcessor:
                 "subchapter_infos": subchapter_infos,
                 "chapter_infos": chapter_infos
             }
-            self.books_collection.insert_one(book_info)
+            inserted_book = self.books_collection.insert_one(book_info)
+            book_id = inserted_book.inserted_id
+            for subchapter_id in subchapter_ids:
+                self.subchapter_collection.update_one(
+                    {"_id": subchapter_id},
+                    {"$set": {"book_id": book_id}}
+                )
             print("Book info uploaded successfully")
+
         except Exception as e:
             print(f"Failed to upload {book_title} to MongoDB: {e}")
         
         return partitions
     
     def process_book(
-        self, 
-        book_file_name: str, 
+        self,
+        book_file_name: str,
         book_path: Optional[str] = None
     ) -> None:
         """
