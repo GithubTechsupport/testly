@@ -159,3 +159,33 @@ def create_vector_index(
         print("Vector index created successfully")
     except Exception as e:
         print(f"Error creating vector index: {e}")
+
+def get_object_id(collection: Collection, field: str, title: str) -> Optional[Any]:
+    """
+    Retrieve the MongoDB ObjectId of a document based on a specific field and title.
+
+    Args:
+        collection: MongoDB collection
+        field: Field name to match
+        title: Title of the document to search for
+
+    Returns:
+        ObjectId of the document if found, else None
+    """
+    document = collection.find_one({field: title}, {"_id": 1})
+    return document["_id"] if document else None
+
+def get_field_by_object_id(collection: Collection, object_id: Any, field: str) -> Optional[Any]:
+    """
+    Retrieve the value of a specific field from a document using its ObjectId.
+
+    Args:
+        collection: MongoDB collection
+        object_id: ObjectId of the document
+        field: Field name to retrieve
+
+    Returns:
+        Value of the field if found, else None
+    """
+    document = collection.find_one({"_id": object_id}, {field: 1})
+    return document.get(field) if document else None

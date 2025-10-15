@@ -12,7 +12,7 @@ from bson import ObjectId
 from ..models.ai_models import MistralEmbed, MistralOCR
 from ..utils.timing import function_timer
 from ..utils.tokenizer import Tokenizer
-from ..utils.database_funcs import get_mongo_client, delete_collection, get_entry_single
+from ..utils.database_funcs import get_mongo_client, get_entry_single
 from ..data import BOOK_CATALOG
 
 
@@ -94,7 +94,6 @@ class TextEmbedder:
     @function_timer
     def get_chunks(
         self, 
-        book_name: str, 
         book_id: Optional[str] = None,
         use_ocr: bool = False
     ) -> Tuple[List[str], List[str]]:
@@ -115,13 +114,11 @@ class TextEmbedder:
         
         # Get subchapter IDs
         if book_id:
-            book_doc = self.books_collection.find_one({"_id": ObjectId(book_id)})
-        else:
-            book_doc = self.books_collection.find_one({"book_title": book_name})
+            book_doc = self.books_collection.find_one({"_id": book_id})
         
         if not book_doc:
-            raise ValueError(f"Book not found: {book_name}")
-        
+            raise ValueError(f"Book not found: {book_id}")
+
         subchapter_ids = book_doc["subchapter_ids"]
         docs = list(self.subchapter_collection.find({"_id": {"$in": subchapter_ids}}))
         total = len(docs)
@@ -187,7 +184,7 @@ class TextEmbedder:
         chunks: List[str], 
         embeddings: List[List[float]], 
         subchapters: List[str], 
-        book_name: str
+        book_id: ObjectId
     ) -> None:
         """
         Insert chunks and embeddings into MongoDB.
@@ -196,13 +193,13 @@ class TextEmbedder:
             chunks: List of text chunks
             embeddings: List of embedding vectors
             subchapters: List of subchapter titles
-            book_name: Name of the book
+            book_id: MongoDB ObjectId of the book
         """
         print("Inserting into MongoDB...")
         
         docs_to_insert = [
             {
-                "book_name": book_name,
+                "book_id": book_id,
                 "subchapter_title": subchapter,
                 "text": chunk,
                 "embedding": embedding
@@ -214,11 +211,9 @@ class TextEmbedder:
         print("Inserted into MongoDB")
     
     def process_book(
-        self, 
-        book_name: str, 
-        book_id: Optional[str] = None,
+        self,
+        book_id: ObjectId,
         use_ocr: bool = False,
-        clear_existing: bool = True
     ) -> None:
         """
         Complete pipeline to embed a book.
@@ -229,12 +224,10 @@ class TextEmbedder:
             use_ocr: Whether to use OCR
             clear_existing: Whether to clear existing embeddings
         """
-        if clear_existing:
-            delete_collection(self.embedding_collection)
         
-        chunks, subchapters = self.get_chunks(book_name, book_id, use_ocr)
+        chunks, subchapters = self.get_chunks(book_id, use_ocr)
         embeddings = self.embed_all_chunks(chunks)
-        self.insert_embeddings(chunks, embeddings, subchapters, book_name)
+        self.insert_embeddings(chunks, embeddings, subchapters, book_id)
 
 
 if __name__ == "__main__":
