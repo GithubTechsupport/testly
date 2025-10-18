@@ -1,65 +1,65 @@
-import os
-import sys
-from pathlib import Path
-
-from flask import Flask, request, jsonify
+from flask import Blueprint, jsonify, request
 from bson import ObjectId
-from dotenv import load_dotenv
-
-# Ensure we can import from src/
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from bson.errors import InvalidId
 
 from src.core.pdf_processor import PDFProcessor
 from src.core.text_embedder import TextEmbedder
 
-load_dotenv()
+upload_bp = Blueprint("upload_pipeline", __name__)
+_ALLOWED_VISIBILITY = {"public", "private"}
 
-app = Flask(__name__)
 
-@app.get("/health")
-def health():
-    return jsonify(status="ok"), 200
-
-@app.post("/api/process-book")
-def process_book():
+@upload_bp.post("/upload-embed")
+def upload_and_embed():
     """
     JSON body:
     {
       "book_name": "Your Book Name",
       "s3_link": "https://your-bucket.s3.amazonaws.com/your.pdf",
-      "use_ocr": false  // optional
+      "visibility": "Public",              // required ("Public" or "Private")
+      "uploader": "6530e...",              // required string ObjectId
+      "use_ocr": false                     // optional
     }
     """
     data = request.get_json(silent=True) or {}
     book_name = data.get("book_name")
     s3_link = data.get("s3_link")
+    visibility = data.get("visibility", "")
+    uploader = data.get("uploader")
     use_ocr = bool(data.get("use_ocr", False))
 
     if not book_name or not s3_link:
         return jsonify(error="book_name and s3_link are required"), 400
+    if not uploader:
+        return jsonify(error="uploader is required"), 400
+
+    normalized_visibility = str(visibility).strip().lower()
+    if normalized_visibility not in _ALLOWED_VISIBILITY:
+        return jsonify(error="visibility must be 'Public' or 'Private'"), 400
 
     try:
-        # 1) Ingest the PDF (creates book and subchapters, persists original s3_link)
-        processor = PDFProcessor()
-        result = processor.process_book(book_name=book_name, pdf_s3_url=s3_link)
-        book_id_str = result["book_id"]
+        uploader_id = ObjectId(uploader)
+    except (InvalidId, TypeError):
+        return jsonify(error="uploader must be a valid ObjectId string"), 400
 
-        # 2) Embed the created book by its ObjectId
-        embedder = TextEmbedder()
-        embedder.process_book(book_id=ObjectId(book_id_str), use_ocr=use_ocr)
+    processor = PDFProcessor()
+    embedder = TextEmbedder()
+
+    try:
+        result = processor.process_book(
+            book_title=book_name,
+            pdf_s3_url=s3_link,
+            visibility=normalized_visibility.capitalize(),
+            uploader=uploader_id,
+        )
+        embedder.process_book(book_id=result["book_id"], use_ocr=use_ocr)
 
         return jsonify(
             status="ok",
-            book_id=book_id_str,
+            book_id=result["book_id"],
             book_title=result["book_title"],
-            used_ocr=use_ocr
+            visibility=normalized_visibility.capitalize(),
+            used_ocr=use_ocr,
         ), 200
-
     except Exception as exc:
-        # Log to stdout/stderr as needed
         return jsonify(error=str(exc)), 500
-
-
-if __name__ == "__main__":
-    # Windows-friendly run: python scripts\upload_embed_api.py
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5001)))
