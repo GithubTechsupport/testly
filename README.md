@@ -1,6 +1,6 @@
 # Testly
 
-Testly is a modular project for ingesting textbook PDFs, splitting content into structured units, generating embeddings, and generating queries to a Mistral language model, and exposing a simple API to trigger the pipelines. The repository is evolving toward a three-part structure: client, server, and system. At present, the system component is the primary implementation.
+Testly is a modular project for ingesting textbook PDFs, splitting content into structured units, generating embeddings, and generating queries to a Mistral language model for question generation, and exposing a simple API to trigger the pipelines. The repository is evolving toward a three-part structure: client, server, and system. At present, the system component is the primary implementation.
 
 ## Table of Contents
 - Overview
