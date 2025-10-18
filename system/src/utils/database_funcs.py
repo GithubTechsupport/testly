@@ -189,3 +189,18 @@ def get_field_by_object_id(collection: Collection, object_id: Any, field: str) -
     """
     document = collection.find_one({"_id": object_id}, {field: 1})
     return document.get(field) if document else None
+
+def set_collection_validator(db, collection_name: str, json_schema: dict) -> None:
+    """
+    Create or update a collection validator using MongoDB's $jsonSchema.
+    """
+    try:
+        db.create_collection(collection_name)
+    except Exception:
+        pass
+    db.command({
+        "collMod": collection_name,
+        "validator": {"$jsonSchema": json_schema},
+        "validationLevel": "moderate",
+        "validationAction": "error",
+    })

@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from typing import Dict, List, Optional
+from typing import Any, Dict, List
 
 import boto3
 import fitz
@@ -40,219 +40,198 @@ class PDFProcessor:
 
     def __init__(self) -> None:
         """Initialize PDF processor with S3 and MongoDB clients."""
-        self.s3_client = boto3.client("s3")
         self.bucket_name = os.getenv("AWS_BUCKET_NAME")
+        if not self.bucket_name:
+            raise ValueError("AWS_BUCKET_NAME environment variable is required")
+
+        self.s3_client = boto3.client("s3")
 
         mongo_client = get_mongo_client()
         self.db = mongo_client["bookTestMaker"]
+        self.books_collection = self.db["books"]
+        self.chapter_collection = self.db["chapters"]
         self.subchapter_collection = self.db["subchapters"]
-        self.books_collection = self.db["bookInfo"]
 
-    def create_subchapter_partitions(
+    def create_chapter_structure(
         self,
         pdf_path: str,
-        book_name: str,
+        book_title: str,
         max_level: int = 2,
-    ) -> List[Dict]:
-        """
-        Extract table of contents and create subchapter partitions.
-
-        Args:
-            pdf_path: Path to the PDF file.
-            book_name: Name provided by the user.
-            max_level: Maximum TOC depth to keep.
-
-        Returns:
-            List of partition dictionaries containing chapter/subchapter info.
-        """
+    ) -> List[Dict[str, Any]]:
+        """Extract table of contents and build a chapter/subchapter structure."""
         print("Extracting TOC...")
         doc = fitz.open(pdf_path)
         toc = doc.get_toc()
+        page_count = doc.page_count
 
-        partitions: List[Dict] = []
-        prev_title: Optional[str] = None
-        parent_title: Optional[str] = None
+        chapters: List[Dict[str, Any]] = []
+        current_chapter: Dict[str, Any] | None = None
         parent_invalid = False
 
         for level, title, start_page in toc:
-            if level > max_level:
-                continue
-
-            if partitions and partitions[-1]["subchapter_title"] == prev_title:
-                partitions[-1]["end_page"] = start_page
-
-            if level == 1:
-                parent_title = title
-                parent_invalid = False
-            elif parent_invalid:
-                prev_title = title
+            if level > max_level or not title:
                 continue
 
             title_lower = title.lower().strip()
-            if any(term in title_lower for term in self.EXCLUDE_TERMS):
-                if level == 1:
-                    parent_invalid = True
-                prev_title = title
-                continue
+            if level == 1:
+                if current_chapter:
+                    if current_chapter["end_page"] is None:
+                        current_chapter["end_page"] = start_page - 1
+                    if current_chapter["subchapters"]:
+                        last_sub = current_chapter["subchapters"][-1]
+                        if last_sub["end_page"] is None:
+                            last_sub["end_page"] = start_page - 1
 
-            prev_title = title
-            partitions.append(
-                {
-                    "level": level,
-                    "book_name": book_name,
-                    "chapter_title": parent_title,
-                    "subchapter_title": title,
+                parent_invalid = any(term in title_lower for term in self.EXCLUDE_TERMS)
+                if parent_invalid:
+                    current_chapter = None
+                    continue
+
+                current_chapter = {
+                    "title": title,
                     "start_page": start_page,
                     "end_page": None,
+                    "subchapters": [],
                 }
-            )
+                chapters.append(current_chapter)
+            elif level == 2:
+                if parent_invalid or current_chapter is None:
+                    continue
+                if any(term in title_lower for term in self.EXCLUDE_TERMS):
+                    if current_chapter["subchapters"]:
+                        last_sub = current_chapter["subchapters"][-1]
+                        if last_sub["end_page"] is None:
+                            last_sub["end_page"] = max(last_sub["start_page"], start_page)
+                    continue
 
-        if partitions and partitions[-1]["end_page"] is None:
-            partitions[-1]["end_page"] = doc.page_count + 1
+                if current_chapter["subchapters"]:
+                    last_sub = current_chapter["subchapters"][-1]
+                    if last_sub["end_page"] is None:
+                        last_sub["end_page"] = max(last_sub["start_page"], start_page)
+
+                current_chapter["subchapters"].append(
+                    {
+                        "title": title,
+                        "start_page": start_page,
+                        "end_page": None,
+                    }
+                )
+
+        # Finalize end pages
+        for chapter in chapters:
+            if chapter["end_page"] is None:
+                chapter["end_page"] = page_count
+            if not chapter["subchapters"]:
+                chapter["subchapters"].append(
+                    {
+                        "title": chapter["title"],
+                        "start_page": chapter["start_page"],
+                        "end_page": chapter["end_page"],
+                    }
+                )
+            else:
+                first_sub = chapter["subchapters"][0]
+                if first_sub["start_page"] > chapter["start_page"]:
+                    chapter["subchapters"].insert(
+                        0,
+                        {
+                            "title": f"{chapter['title']} - introduction",
+                            "start_page": chapter["start_page"],
+                            "end_page": min(first_sub["start_page"] - 1, chapter["end_page"]),
+                        },
+                    )
+                last_sub = chapter["subchapters"][-1]
+                if last_sub["end_page"] is None:
+                    last_sub["end_page"] = chapter["end_page"]
 
         doc.close()
-        print(f"TOC extraction complete. Total subchapters: {len(partitions)}")
-        return partitions
+        print(f"TOC extraction complete. Total chapters: {len(chapters)}")
+        return chapters
 
-    def add_chapter_numbers(self, partitions: List[Dict]) -> None:
-        """Annotate partitions with chapter and subchapter ordering."""
-        print("Adding chapter and subchapter numbers...")
-        chapter_counter = 0
-        subchapter_counter = 0
-
-        for entry in partitions:
-            if entry["level"] == 1:
-                subchapter_counter = 0
-                chapter_counter += 1
-            subchapter_counter += 1
-            entry["chapter_number"] = chapter_counter
-            entry["subchapter_number"] = subchapter_counter
-
-        print("Added chapter and subchapter numbers")
-
-    def upload_to_s3(self, file_path: str, object_name: str) -> Optional[str]:
-        """Upload a local file to S3."""
-        print(f"Uploading {file_path} to S3...")
-        try:
-            self.s3_client.upload_file(file_path, self.bucket_name, object_name)
-            return f"https://{self.bucket_name}.s3.amazonaws.com/{object_name}"
-        except Exception as exc:  # noqa: BLE001
-            print(f"Error uploading {file_path} to S3: {exc}")
-            return None
+    def upload_to_s3(self, file_path: str, object_name: str) -> str:
+        """Upload a local file to S3 and return its public URL."""
+        print(f"Uploading {file_path} to S3 as {object_name}...")
+        self.s3_client.upload_file(file_path, self.bucket_name, object_name)
+        return f"https://{self.bucket_name}.s3.amazonaws.com/{object_name}"
 
     @staticmethod
     def _sanitize_filename(filename: str) -> str:
         """Remove characters that are invalid for filenames."""
-        invalid_chars = [":", "/", "\\", "?", ">", "<"]
+        invalid_chars = [":", "/", "\\", "?", ">", "<", "|", "*", '"']
         for char in invalid_chars:
             filename = filename.replace(char, "-")
         return filename.replace(" ", "_")
 
-    def split_and_upload_pdfs(
+    def split_and_upload_subchapters(
         self,
+        book_id: ObjectId,
         book_title: str,
-        partitions: List[Dict],
+        chapters: List[Dict[str, Any]],
         pdf_path: str,
-        original_pdf_s3_url: str,
-        output_dir: str = "/tmp",
-    ) -> ObjectId:
-        """
-        Split the source PDF into subchapters and upload artefacts to S3/MongoDB.
+    ) -> tuple[list[ObjectId], list[ObjectId]]:
+        """Split the source PDF into subchapters and upload artefacts to S3/MongoDB."""
+        chapter_ids: list[ObjectId] = []
+        subchapter_ids: list[ObjectId] = []
 
-        Returns:
-            ObjectId of the created book document.
-        """
-        print("Splitting PDF into subchapters...")
-        pdf_reader = PyPDF2.PdfReader(pdf_path)
+        with open(pdf_path, "rb") as pdf_file:
+            reader = PyPDF2.PdfReader(pdf_file)
+            with tempfile.TemporaryDirectory() as working_dir:
+                for chapter in chapters:
+                    chapter_doc = {
+                        "bookID": book_id,
+                        "chapterTitle": chapter["title"],
+                        "subchapterIds": [],
+                        "pageStart": chapter["start_page"],
+                        "pageEnd": chapter["end_page"],
+                    }
+                    chapter_result = self.chapter_collection.insert_one(chapter_doc)
+                    chapter_id = chapter_result.inserted_id
+                    chapter_ids.append(chapter_id)
 
-        subchapter_ids: List[ObjectId] = []
-        subchapter_infos: List[List] = []
-        chapter_title_order: List[str] = []
-        chapter_ranges: Dict[str, List[int]] = {}
+                    chapter_sub_ids: list[ObjectId] = []
+                    for sub in chapter["subchapters"]:
+                        writer = PyPDF2.PdfWriter()
+                        start_index = max(sub["start_page"] - 1, 0)
+                        end_index = min(sub["end_page"], len(reader.pages))
 
-        os.makedirs(output_dir, exist_ok=True)
+                        for page_index in range(start_index, end_index):
+                            writer.add_page(reader.pages[page_index])
 
-        for partition in partitions:
-            if partition["end_page"] is None:
-                continue
+                        safe_chapter = self._sanitize_filename(chapter["title"])
+                        safe_sub = self._sanitize_filename(sub["title"])
+                        filename = f"{safe_chapter}_{safe_sub}.pdf"
+                        local_path = os.path.join(working_dir, filename)
 
-            pdf_writer = PyPDF2.PdfWriter()
-            for page_num in range(partition["start_page"] - 1, partition["end_page"]):
-                pdf_writer.add_page(pdf_reader.pages[page_num])
+                        with open(local_path, "wb") as output_pdf:
+                            writer.write(output_pdf)
 
-            safe_chap_title = self._sanitize_filename(
-                partition.get("chapter_title") or partition["subchapter_title"]
-            )
-            safe_sub_title = self._sanitize_filename(partition["subchapter_title"])
-            output_filename = (
-                f"{partition['book_name']}_Chapter_{safe_chap_title}_"
-                f"Subchapter_{safe_sub_title}.pdf"
-            )
-            output_filepath = os.path.join(output_dir, output_filename)
+                        object_name = f"{book_id}/{filename}"
+                        s3_link = self.upload_to_s3(local_path, object_name)
 
-            with open(output_filepath, "wb") as output_pdf:
-                pdf_writer.write(output_pdf)
+                        sub_doc = {
+                            "bookID": book_id,
+                            "chapterID": chapter_id,
+                            "subchapterTitle": sub["title"],
+                            "pageStart": sub["start_page"],
+                            "pageEnd": sub["end_page"],
+                            "s3Link": s3_link,
+                        }
+                        sub_result = self.subchapter_collection.insert_one(sub_doc)
+                        sub_id = sub_result.inserted_id
 
-            s3_link = self.upload_to_s3(output_filepath, output_filename)
-            os.remove(output_filepath)
+                        subchapter_ids.append(sub_id)
+                        chapter_sub_ids.append(sub_id)
+                        print(
+                            f"Uploaded chapter '{chapter['title']}' "
+                            f"subchapter '{sub['title']}'"
+                        )
 
-            if not s3_link:
-                continue
+                    self.chapter_collection.update_one(
+                        {"_id": chapter_id},
+                        {"$set": {"subchapterIds": chapter_sub_ids}},
+                    )
 
-            try:
-                partition["s3_link"] = s3_link
-                partition["book_name"] = book_title
-                partition.pop("level", None)
-
-                result = self.subchapter_collection.insert_one(partition)
-                subchapter_id = result.inserted_id
-                subchapter_ids.append(subchapter_id)
-                subchapter_infos.append(
-                    [partition["subchapter_title"], partition["start_page"]]
-                )
-
-                chapter_title = partition.get("chapter_title") or partition[
-                    "subchapter_title"
-                ]
-                current_index = len(subchapter_infos) - 1
-
-                if chapter_title not in chapter_ranges:
-                    chapter_title_order.append(chapter_title)
-                    chapter_ranges[chapter_title] = [current_index, current_index]
-                else:
-                    chapter_ranges[chapter_title][1] = current_index
-
-                print(f"Uploaded {output_filename} to S3 and MongoDB")
-            except Exception as exc:  # noqa: BLE001
-                print(f"Failed to upload {output_filename} to MongoDB: {exc}")
-
-        chapter_infos = [
-            [title, *chapter_ranges[title]] for title in chapter_title_order
-        ]
-
-        try:
-            print("Uploading book info...")
-            book_info = {
-                "book_title": book_title,
-                "s3_link": original_pdf_s3_url,
-                "subchapter_ids": subchapter_ids,
-                "subchapter_infos": subchapter_infos,
-                "chapter_infos": chapter_infos,
-            }
-            inserted_book = self.books_collection.insert_one(book_info)
-            book_id = inserted_book.inserted_id
-
-            if subchapter_ids:
-                self.subchapter_collection.update_many(
-                    {"_id": {"$in": subchapter_ids}},
-                    {"$set": {"book_id": book_id}},
-                )
-
-            print("Book info uploaded successfully")
-            return book_id
-        except Exception as exc:  # noqa: BLE001
-            print(f"Failed to upload {book_title} to MongoDB: {exc}")
-            raise
+        return chapter_ids, subchapter_ids
 
     @staticmethod
     def _download_pdf(pdf_s3_url: str) -> str:
@@ -268,35 +247,51 @@ class PDFProcessor:
 
     def process_book(
         self,
-        book_name: str,
+        book_title: str,
         pdf_s3_url: str,
+        visibility: str,
+        uploader: ObjectId,
     ) -> Dict[str, str]:
-        """
-        Run the PDF ingestion pipeline for a user-uploaded book.
-
-        Args:
-            book_name: Name supplied by the end user.
-            pdf_s3_url: Location of the uploaded PDF in S3.
-
-        Returns:
-            Dictionary containing the inserted book_id and book_title.
-        """
+        """Run the PDF ingestion pipeline for a user-uploaded book."""
         if not pdf_s3_url:
             raise ValueError("pdf_s3_url must be provided")
-        if not book_name:
-            raise ValueError("book_name must be provided")
+        if not book_title:
+            raise ValueError("book_title must be provided")
+        if not isinstance(uploader, ObjectId):
+            raise TypeError("uploader must be a valid ObjectId")
+
+        normalized_visibility = visibility.strip().lower()
+        if normalized_visibility not in {"public", "private"}:
+            raise ValueError("visibility must be 'Public' or 'Private'")
+        visibility_value = normalized_visibility.capitalize()
 
         tmp_file_path = self._download_pdf(pdf_s3_url)
         try:
-            partitions = self.create_subchapter_partitions(tmp_file_path, book_name)
-            self.add_chapter_numbers(partitions)
-            book_id = self.split_and_upload_pdfs(
-                book_name,
-                partitions,
-                tmp_file_path,
-                original_pdf_s3_url=pdf_s3_url,
+            chapters = self.create_chapter_structure(tmp_file_path, book_title)
+
+            book_doc = {
+                "bookTitle": book_title,
+                "subchapterIds": [],
+                "chapterIds": [],
+                "visibility": visibility_value,
+                "uploader": uploader,
+            }
+            book_result = self.books_collection.insert_one(book_doc)
+            book_id = book_result.inserted_id
+
+            chapter_ids, subchapter_ids = self.split_and_upload_subchapters(
+                book_id=book_id,
+                book_title=book_title,
+                chapters=chapters,
+                pdf_path=tmp_file_path,
             )
-            return {"book_id": str(book_id), "book_title": book_name}
+
+            self.books_collection.update_one(
+                {"_id": book_id},
+                {"$set": {"chapterIds": chapter_ids, "subchapterIds": subchapter_ids}},
+            )
+
+            return {"book_id": str(book_id), "book_title": book_title}
         finally:
             if tmp_file_path and os.path.exists(tmp_file_path):
                 os.remove(tmp_file_path)
@@ -304,5 +299,5 @@ class PDFProcessor:
 
 if __name__ == "__main__":
     raise SystemExit(
-        "Run PDFProcessor via the pipelines or provide a book name and S3 link."
+        "Run PDFProcessor via the pipelines or provide required parameters."
     )
