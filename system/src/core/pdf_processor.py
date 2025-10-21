@@ -275,6 +275,7 @@ class PDFProcessor:
                 "chapterIds": [],
                 "visibility": visibility_value,
                 "uploader": uploader,
+                "s3Link": pdf_s3_url,
             }
             book_result = self.books_collection.insert_one(book_doc)
             book_id = book_result.inserted_id
