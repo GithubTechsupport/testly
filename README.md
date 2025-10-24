@@ -1,253 +1,205 @@
 # Testly
 
-Testly is a modular project for ingesting textbook PDFs, splitting content into structured units, generating embeddings, and generating queries to a Mistral language model for question generation, and exposing a simple API to trigger the pipelines. The repository is evolving toward a three-part structure: client, server, and system. At present, the system component is the primary implementation.
+Testly is an end-to-end learning content platform that transforms textbook PDFs into structured knowledge, embeds the content for downstream retrieval, and (soon) exposes experiences through a modern web app. The monorepo contains three cooperating subsystems:
+
+- **system** – Python pipelines for PDF ingestion, segmentation, embeddings, and the existing Flask API.
+- **server** – TypeScript/Express backend that will orchestrate authentication, book management, and hand-offs to the pipelines.
+- **client** – React/TypeScript frontend that provides the learner-facing experience.
+
+This document explains how the pieces fit together, how to get each environment running locally, and the current development status.
+
+---
 
 ## Table of Contents
-- Overview
-- Repository Structure
-- Quick Start (System)
-- Running the Flask API
-- API Reference
-- Core Pipelines (System/src/core)
-- Configuration and Environment
-- Data and Samples
-- Development Status: Client and Server
-- Testing
-- Troubleshooting
-- License
+
+1. [Architecture Overview](#architecture-overview)
+2. [Repository Layout](#repository-layout)
+3. [Global Prerequisites](#global-prerequisites)
+4. [System (Python Pipelines)](#system-python-pipelines)
+   - [Installation](#installation)
+   - [Running the Flask API](#running-the-flask-api)
+   - [Endpoints](#endpoints)
+5. [Server (Node/Express API)](#server-nodeexpress-api)
+   - [Installation](#installation-1)
+   - [Environment Variables](#environment-variables)
+   - [Available Scripts](#available-scripts)
+6. [Client (React Frontend)](#client-react-frontend)
+   - [Installation](#installation-2)
+   - [Environment Variables](#environment-variables-1)
+   - [Available Scripts](#available-scripts-1)
+7. [End-to-End Workflow](#end-to-end-workflow)
+8. [Troubleshooting](#troubleshooting)
+9. [Roadmap](#roadmap)
 
 ---
 
-## Overview
+## Architecture Overview
 
-- Ingest PDF files from a provided S3 URL.
-- Create a “book” record with subchapters/sections.
-- Generate embeddings to enable downstream tasks such as search, Q&A, and learning experiences.
-- Expose a minimal Flask API to process a book end-to-end.
-
-The system folder contains the pipeline for upload and embed and is ready to run. The client and server components are planned but not yet implemented.
+1. **Upload & Processing (system)**: The Python pipeline ingests PDFs (from S3 or local samples), splits them into chapters/subchapters, persists metadata, and computes embeddings for retrieval or question generation.
+2. **API Gateway (server)**: The TypeScript service will authenticate users, manage library data in MongoDB, orchestrate uploads to S3, and call into the Python pipeline via HTTP.
+3. **Experience (client)**: The React frontend uses TanStack Query, Zustand, and TailwindCSS for a modern UI supporting registration, login, browsing public books, and managing a personal library. It communicates with the server API.
 
 ---
 
-## Repository Structure
-
-At the top level:
+## Repository Layout
 
 ```
 testly/
-├─ client/          # Planned front-end; not yet implemented
-├─ server/          # Planned backend gateway/orchestration; not yet implemented
-└─ system/          # Implemented core data pipeline and API
+├─ client/    # React + Vite frontend (TypeScript)
+├─ server/    # Express + MongoDB backend (TypeScript)
+└─ system/    # Python data pipeline + Flask API
 ```
 
-Inside system/:
-
-```
-system/
-├─ .env
-├─ .env.example
-├─ requirements.txt
-├─ README.md
-├─ config/
-├─ scripts/
-│  ├─ run_pipeline.py # An old iteration of the pipeline
-│  └─ upload_embed_api.py   # Flask API entrypoint
-└─ src/
-   ├─ core/
-   │  ├─ pdf_processor.py
-   │  ├─ text_embedder.py
-   │  └─ question_generator.py
-   ├─ models/
-   │  └─ ai_models.py
-   └─ utils/
-      ├─ database_funcs.py
-      ├─ s3_funcs.py
-      ├─ tokenizer.py
-      ├─ timing.py
-      └─ health_check.py
-```
+Each subdirectory maintains its own dependencies and `.env` template. Work on them independently or run them together for the full stack.
 
 ---
 
-## Quick Start (System)
+## Global Prerequisites
 
-Prerequisites:
-- Windows
-- Python 3.11+ recommended
-- An environment file (see Configuration and Environment)
+- Git
+- Node.js 20+ (or the version required by `server/package.json` / `client/package.json`)
+- npm 10+
+- Python 3.11+
+- MongoDB Atlas/local instance & AWS credentials (for S3) if you intend to run the backend integrations
 
-1) Navigate to the system folder:
-- PowerShell
-```
+> Tip: Clone the repository and then follow the setup steps for each component you plan to run.
+
+---
+
+## System (Python Pipelines)
+
+### Installation
+
+```powershell
 cd system
-```
-
-2) Create and activate a virtual environment:
-- PowerShell
-```
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-3) Install dependencies:
-- PowerShell
-```
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+Copy-Item .env.example .env  # fill in credentials afterwards
 ```
 
-4) Configure environment:
-- Copy .env.example to .env and fill in required values (see Configuration and Environment).
+Key environment variables (see `system/.env.example` for the full list):
 
-5) Run the API (see Running the Flask API), or experiment with the scripts in system/scripts.
+- `MONGO_URI` – MongoDB connection used by the pipeline.
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` – optional if you upload to S3 within the pipeline.
+- `PORT` – overrides Flask’s default of 5001.
 
----
+### Running the Flask API
 
-## Running the Flask API
-
-The Flask server entrypoint is:
-- system/scripts/upload_embed_api.py
-
-Start the server:
-- PowerShell (from system/)
-```
+```powershell
+cd system
+.\.venv\Scripts\Activate.ps1
 python scripts\upload_embed_api.py
 ```
 
-- The app listens on 0.0.0.0 by default, port 5001 (overridable via PORT in .env).
-- Health check: http://localhost:5001/health
+The service exposes health and ingestion endpoints. Stop with <kbd>Ctrl</kbd> + <kbd>C</kbd>.
 
-Notes:
-- The script dynamically adjusts the Python path to import from system/src.
-- Ensure you run it from within the system directory so .env is picked up and imports work.
+### Endpoints
 
----
+- `GET /health` – returns `{ "status": "ok" }` when the pipeline is reachable.
+- `POST /api/v1/pipelines/upload-embed`
+  ```json
+  {
+    "book_name": "Linear Algebra Essentials",
+    "s3_link": "https://your-bucket.s3.amazonaws.com/book.pdf",
+    "visibility": "Private",
+    "use_ocr": false
+  }
+  ```
+  Responds with the MongoDB `book_id`, status, and metadata collected during ingestion.
 
-## API Reference
-
-Base URL: http://localhost:5001
-
-- GET /health
-  - Returns a simple status check.
-  - 200 OK: {"status":"ok"}
-
-- POST /api/process-book
-  - Triggers the end-to-end pipeline: ingest the PDF and generate embeddings.
-  - Request (JSON):
-    ```
-    {
-      "book_name": "Your Book Name",
-      "s3_link": "https://your-bucket.s3.amazonaws.com/your.pdf",
-      "use_ocr": false
-    }
-    ```
-    - book_name: required, string
-    - s3_link: required, string (S3 URL to the PDF)
-    - use_ocr: optional, boolean (defaults to false)
-  - Response (200 OK):
-    ```
-    {
-      "status": "ok",
-      "book_id": "<book-id>",
-      "book_title": "<book-title>",
-      "used_ocr": false
-    }
-    ```
-  - Errors (400/500): {"error": "<message>"}
-
-Example using curl (PowerShell):
-```
-curl -X POST http://localhost:5001/api/process-book `
-  -H "Content-Type: application/json" `
-  -d "{ ""book_name"": ""Algebra 101"", ""s3_link"": ""https://your-bucket.s3.amazonaws.com/algebra.pdf"", ""use_ocr"": false }"
-```
+Sample PDFs for local testing live in `system/data/textbooks/`.
 
 ---
 
-## Core Pipeline (System/src/core)
+## Server (Node/Express API)
 
-The upload and embed pipeline is orchestrated by two main components:
+The server is under active development. The core domain models, services, and middleware are present; controllers and routes are being wired next. You can already install dependencies, compile the project, and prepare the environment.
 
-- PDFProcessor (src/core/pdf_processor.py)
-  - process_book(book_name: str, pdf_s3_url: str) -> dict
-  - Responsibilities:
-    - Fetch/validate the PDF source.
-    - Parse and segment the PDF into structured units (book, chapters, subchapters).
-    - Persist metadata (including original s3_link).
-    - Returns identifiers (e.g., book_id) and basic metadata.
+### Installation
 
-- TextEmbedder (src/core/text_embedder.py)
-  - process_book(book_id: ObjectId, use_ocr: bool = False) -> None
-  - Responsibilities:
-    - Retrieve the book and its segments by book_id.
-    - Optionally use OCR for pages/segments where text extraction requires it.
-    - Generate vector embeddings for downstream retrieval tasks.
-    - Store embeddings with references to the corresponding segments.
-
-The question generation pipeline is currently orchestrated by the following components:
-
-- question_generator.py (planned/optional next step)
-    - Designed for generating practice questions from embedded/parsed content.
-    - Integrates with models in src/models/ai_models.py (as configured).
-
-Utilities and supporting modules:
-- src/utils/s3_funcs.py: Interacts with S3 for file handling.
-- src/utils/database_funcs.py: Data persistence helpers.
-- src/utils/tokenizer.py, src/utils/timing.py, src/utils/health_check.py: Support functions.
-
----
-
-## Configuration and Environment
-
-Environment variables are loaded via python-dotenv. Use the provided template:
-
-1) From system/, copy and edit:
-- PowerShell
-```
+```powershell
+cd server
+npm install
 Copy-Item .env.example .env
 ```
 
-2) Open .env and provide the required values. Refer to the inline comments in .env.example for details. Typical settings include:
-- Storage configuration (e.g., S3 bucket/region/credentials or access configuration).
-- Database/Vector store connection strings if applicable.
-- App settings like PORT for the Flask server.
+### Environment Variables
 
-Important:
-- The Flask app reads PORT from the environment, defaulting to 5001.
-- Keep secrets out of version control. .env is already gitignored.
+Edit `server/.env` and provide values for:
+
+- `MONGO_URI` – MongoDB database URI.
+- `JWT_SECRET` / `JWT_EXPIRES_IN` – secrets for access tokens.
+- `AWS_REGION`, `AWS_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` – S3 storage for uploaded PDFs and covers.
+- `FLASK_BASE_URL` – URL for the running system service (default `http://localhost:5001`).
+- `PORT` – Express server port (defaults to 4000 inside the config helper).
+
+### Available Scripts
+
+- `npm run build` – Type-checks and compiles TypeScript to `dist/` (currently passes).
+- `npm run dev` – Starts `ts-node-dev` (requires `src/index.ts`, coming soon).
+- `npm run lint` – Runs ESLint.
+- `npm test` – Reserved for future Vitest suites.
+
+Once controllers/routes are added, `npm run dev` will serve the API that the client consumes.
 
 ---
 
-## Data and Samples
+## Client (React Frontend)
 
-- Local sample PDFs live under system/data/textbooks/ (e.g., 0.pdf, 1.pdf, ...).
-- These are useful for local experiments and testing the pipeline without external S3 dependencies.
-- For API-based processing, provide an accessible s3_link in the POST request.
+The client already boots with authentication flows, navigation, and book management UI; API calls rely on the upcoming server endpoints.
+
+### Installation
+
+```powershell
+cd client
+npm install
+Copy-Item .env.example .env  # create one if necessary
+```
+
+### Environment Variables
+
+Create `client/.env` (Vite format) and set:
+
+- `VITE_API_URL` – Base URL of the Express server (e.g., `http://localhost:4000/api/v1`).
+
+### Available Scripts
+
+- `npm run dev` – Launches Vite dev server on http://localhost:5173.
+- `npm run build` – Runs TypeScript project references and outputs production assets to `dist/`.
+- `npm run preview` – Serves a local preview of the built bundle.
+- `npm run lint` – Executes ESLint with the shared config.
+
+The app uses TanStack Query for data fetching, Zustand for auth state, and TailwindCSS for styling. When the backend API is ready, update `VITE_API_URL`, start both services, and the UI will call into the server.
 
 ---
 
-## Development Status: Client and Server
+## End-to-End Workflow
 
-- client/
-  - Status: Not yet implemented.
+1. **Spin up MongoDB + S3 (or mocks)** – ensure credentials exist for both the system pipeline and the server.
+2. **Run the system Flask API** – provides the upload/embedding pipeline at `http://localhost:5001`.
+3. **Launch the server** – the Express app will authenticate users, accept file uploads, push to S3, and invoke the system API.
+4. **Start the client** – the React app authenticates against the server, lets users browse books, and triggers uploads that propagate through the pipeline.
 
-- server/
-  - Status: Not yet implemented.
-
-- system/
-  - Status: Actively implemented. Contains the processing pipeline and a minimal API for ingestion + embedding. FUll pipeline for question generation is worked on, though the capability is there
+While the backend wiring is being finalized, you can already interact with the system API directly and develop UI flows against mocked responses by using the TanStack Query devtools.
 
 ---
 
 ## Troubleshooting
 
-- Import errors when running the API:
-  - Ensure you run commands from the system directory so the dynamic sys.path adjustment and .env loading apply.
-- Cannot reach the server:
-  - Confirm the port (default 5001). Check or set PORT in .env.
-  - Verify Windows Firewall settings for local access.
-- S3 or storage access issues:
-  - Double-check credentials and bucket permissions in .env.
-  - Ensure the provided s3_link is accessible.
+- **Missing runtime dependencies** – double-check you have run `npm install` / `pip install -r requirements.txt` in each subproject.
+- **Environment variables** – ensure `.env` files exist for every layer and match the documented keys.
+- **Node module resolution errors** – the server uses native ES modules (`"module": "NodeNext"`) so imports must include `.js` after compilation; avoid rewriting compiled paths manually.
+- **Large frontend bundle warnings** – Rolldown/Vite may warn about chunks >500 kB. Code-splitting is on the roadmap.
+- **Flask cannot import pipeline modules** – run commands from the `system/` directory so the `sys.path` adjustments in scripts take effect.
 
 ---
+
+## Roadmap
+
+- ✅ System pipeline & Flask API
+- 🚧 Complete Express controllers/routes + persistence wiring
+- 🚧 Hook frontend mutations/queries to live API
+- 🔜 Automated tests across all layers
+- 🔜 CI/CD automation and deployment playbooks
