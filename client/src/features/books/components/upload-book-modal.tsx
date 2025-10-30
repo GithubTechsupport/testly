@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Upload } from "lucide-react";
 import { z } from "zod";
@@ -38,6 +38,7 @@ export function UploadBookModal({ open, onClose }: UploadBookModalProps) {
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors },
   } = useForm<UploadFormData>({
@@ -111,18 +112,23 @@ export function UploadBookModal({ open, onClose }: UploadBookModalProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="pdfFile">Book PDF</Label>
-            <Input
-              id="pdfFile"
-              type="file"
-              accept="application/pdf"
-              {...register("pdfFile", {
-                setValueAs: (value: unknown) => {
-                  if (value instanceof FileList) {
-                    return value.item(0) ?? undefined;
-                  }
-                  return (value as File | undefined) ?? undefined;
-                },
-              })}
+            <Controller
+              control={control}
+              name="pdfFile"
+              render={({ field: { name, onChange, onBlur, ref } }) => (
+                <Input
+                  id="pdfFile"
+                  type="file"
+                  accept="application/pdf"
+                  name={name}
+                  onBlur={onBlur}
+                  ref={ref}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? undefined;
+                    onChange(file);
+                  }}
+                />
+              )}
             />
             {errors.pdfFile && (
               <p className="text-xs text-red-400">{errors.pdfFile.message}</p>
@@ -131,18 +137,23 @@ export function UploadBookModal({ open, onClose }: UploadBookModalProps) {
 
           <div className="space-y-2">
             <Label htmlFor="coverImage">Cover image (optional)</Label>
-            <Input
-              id="coverImage"
-              type="file"
-              accept="image/png,image/jpeg"
-              {...register("coverImage", {
-                setValueAs: (value: unknown) => {
-                  if (value instanceof FileList) {
-                    return value.item(0) ?? null;
-                  }
-                  return (value as File | null | undefined) ?? null;
-                },
-              })}
+            <Controller
+              control={control}
+              name="coverImage"
+              render={({ field: { name, onChange, onBlur, ref } }) => (
+                <Input
+                  id="coverImage"
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  name={name}
+                  onBlur={onBlur}
+                  ref={ref}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    onChange(file);
+                  }}
+                />
+              )}
             />
             {errors.coverImage && (
               <p className="text-xs text-red-400">{errors.coverImage.message}</p>
