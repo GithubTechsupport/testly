@@ -68,8 +68,11 @@ class PDFProcessor:
         current_chapter: Dict[str, Any] | None = None
         parent_invalid = False
 
-        for level, title, start_page in toc:
+        total_toc_entries = len(toc)
+        for idx, (level, title, start_page) in enumerate(toc, start=1):
             if level > max_level or not title:
+                # Still report progress over total TOC entries
+                print(f"{idx} / {total_toc_entries}", end="\r")
                 continue
 
             title_lower = title.lower().strip()
@@ -85,6 +88,7 @@ class PDFProcessor:
                 parent_invalid = any(term in title_lower for term in self.EXCLUDE_TERMS)
                 if parent_invalid:
                     current_chapter = None
+                    print(f"{idx} / {total_toc_entries}", end="\r")
                     continue
 
                 current_chapter = {
@@ -96,12 +100,14 @@ class PDFProcessor:
                 chapters.append(current_chapter)
             elif level == 2:
                 if parent_invalid or current_chapter is None:
+                    print(f"{idx} / {total_toc_entries}", end="\r")
                     continue
                 if any(term in title_lower for term in self.EXCLUDE_TERMS):
                     if current_chapter["subchapters"]:
                         last_sub = current_chapter["subchapters"][-1]
                         if last_sub["end_page"] is None:
                             last_sub["end_page"] = max(last_sub["start_page"], start_page)
+                    print(f"{idx} / {total_toc_entries}", end="\r")
                     continue
 
                 if current_chapter["subchapters"]:
@@ -116,6 +122,9 @@ class PDFProcessor:
                         "end_page": None,
                     }
                 )
+
+            # Progress update for each processed TOC entry
+            print(f"{idx} / {total_toc_entries}", end="\r")
 
         # Finalize end pages
         for chapter in chapters:
@@ -145,12 +154,13 @@ class PDFProcessor:
                     last_sub["end_page"] = chapter["end_page"]
 
         doc.close()
+        if total_toc_entries:
+            print()  # newline after carriage return updates
         print(f"TOC extraction complete. Total chapters: {len(chapters)}")
         return chapters
 
     def upload_to_s3(self, file_path: str, object_name: str) -> str:
         """Upload a local file to S3 and return its public URL."""
-        print(f"Uploading {file_path} to S3 as {object_name}...")
         self.s3_client.upload_file(file_path, self.bucket_name, object_name)
         return f"https://{self.bucket_name}.s3.amazonaws.com/{object_name}"
 
@@ -173,6 +183,14 @@ class PDFProcessor:
         chapter_ids: list[ObjectId] = []
         subchapter_ids: list[ObjectId] = []
 
+        total_chapters = len(chapters)
+        total_subchapters = sum(len(ch["subchapters"]) for ch in chapters)
+        # We'll count MongoDB operations: chapter inserts + subchapter inserts + chapter updates
+        subchapter_count = 0
+
+        if total_subchapters > 0:
+            print("Uploading to S3 and MongoDB...")
+        
         with open(pdf_path, "rb") as pdf_file:
             reader = PyPDF2.PdfReader(pdf_file)
             with tempfile.TemporaryDirectory() as working_dir:
@@ -221,15 +239,20 @@ class PDFProcessor:
 
                         subchapter_ids.append(sub_id)
                         chapter_sub_ids.append(sub_id)
-                        print(
-                            f"Uploaded chapter '{chapter['title']}' "
-                            f"subchapter '{sub['title']}'"
-                        )
+
+                        subchapter_count += 1
+                        if total_subchapters:
+                            print(f"{subchapter_count} / {total_subchapters}", end="\r")
 
                     self.chapter_collection.update_one(
                         {"_id": chapter_id},
                         {"$set": {"subchapterIds": chapter_sub_ids}},
                     )
+
+        # Finish lines for progress sections
+        if total_subchapters:
+            print() 
+            print("Uploads complete")
 
         return chapter_ids, subchapter_ids
 
@@ -279,6 +302,44 @@ class PDFProcessor:
             }
             book_result = self.books_collection.insert_one(book_doc)
             book_id = book_result.inserted_id
+
+            chapter_ids, subchapter_ids = self.split_and_upload_subchapters(
+                book_id=book_id,
+                book_title=book_title,
+                chapters=chapters,
+                pdf_path=tmp_file_path,
+            )
+
+            self.books_collection.update_one(
+                {"_id": book_id},
+                {"$set": {"chapterIds": chapter_ids, "subchapterIds": subchapter_ids}},
+            )
+
+            return {"book_id": str(book_id), "book_title": book_title}
+        finally:
+            if tmp_file_path and os.path.exists(tmp_file_path):
+                os.remove(tmp_file_path)
+
+    def process_existing_book(self, book_id: ObjectId) -> Dict[str, str]:
+        """Process an existing book document: split into chapters/subchapters and update references.
+
+        Expects the book doc to already contain: bookTitle, s3Link, visibility, uploader.
+        """
+        if not isinstance(book_id, ObjectId):
+            raise TypeError("book_id must be a valid ObjectId")
+
+        book = self.books_collection.find_one({"_id": book_id})
+        if not book:
+            raise ValueError("Book not found for given id")
+
+        book_title = book.get("bookTitle")
+        pdf_s3_url = book.get("s3Link")
+        if not book_title or not pdf_s3_url:
+            raise ValueError("Existing book is missing title or s3Link")
+
+        tmp_file_path = self._download_pdf(pdf_s3_url)
+        try:
+            chapters = self.create_chapter_structure(tmp_file_path, book_title)
 
             chapter_ids, subchapter_ids = self.split_and_upload_subchapters(
                 book_id=book_id,

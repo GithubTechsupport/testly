@@ -32,4 +32,4 @@ app = create_app()
 
 if __name__ == "__main__":
     # Windows-friendly dev run: python scripts\api_server.py
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5001)))
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", os.getenv("PORT"))), debug=True)
