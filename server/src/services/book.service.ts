@@ -38,6 +38,7 @@ export interface BookSummaryDto {
   uploaderName: string;
   uploaderId: string;
   coverImageUrl?: string;
+  state?: "processing" | "finished";
   chapterCount: number;
   isInLibrary: boolean;
 }
@@ -72,6 +73,7 @@ const buildBookSummary = (
   uploaderName: book.uploaderName ?? "Unknown",
   uploaderId: book.uploader.toString(),
   coverImageUrl: book.coverImageUrl,
+  state: book.state as BookSummaryDto["state"],
   chapterCount: book.chapterIds.length,
   isInLibrary: libraryIds.has(book._id.toString()),
 });
@@ -216,39 +218,44 @@ export async function uploadBookAndTriggerPipeline({
     }
   }
 
-  const pipelineResponse = await triggerUploadPipeline({
-    book_name: safeTitle,
-    s3_link: pdfUrl,
+  // Create the book immediately with state=processing
+  const created = await BookModel.create({
+    bookTitle: safeTitle,
+    subchapterIds: [],
+    chapterIds: [],
     visibility,
-    uploader: user._id.toString(),
-    use_ocr: useOcr,
+    uploader: user._id,
+    uploaderName: user.username,
+    s3Link: pdfUrl,
+    coverImageUrl: coverUrl,
+    state: "processing",
   });
 
-  const bookObjectId = new Types.ObjectId(pipelineResponse.book_id);
-
-  await BookModel.updateOne(
-    { _id: bookObjectId },
-    {
-      $set: {
-        coverImageUrl: coverUrl,
-        uploaderName: user.username,
-      },
-    }
-  ).exec();
-
+  // Attach to user library and uploads
   await UserModel.updateOne(
     { _id: user._id },
     {
       $addToSet: {
-        uploadedDocumentIDs: bookObjectId,
-        libraryBookIDs: bookObjectId,
+        uploadedDocumentIDs: created._id,
+        libraryBookIDs: created._id,
       },
     }
   ).exec();
 
+  // Fire the pipeline with only the book id; Flask will process in background and set state=finished
+  try {
+    await triggerUploadPipeline({
+      book_id: created._id.toString(),
+      use_ocr: useOcr,
+    });
+  } catch (error) {
+    // Log and continue – the client should still see the placeholder entry
+    logger.warn("Trigger pipeline failed (request)", error);
+  }
+
   return {
-    bookId: pipelineResponse.book_id,
-    status: (pipelineResponse.status as UploadBookResult["status"]) ?? "queued",
-    message: "Upload pipeline triggered",
+    bookId: created._id.toString(),
+    status: "processing",
+    message: "Upload started",
   };
 }

@@ -13,20 +13,18 @@ export interface UploadPipelineResponse {
 }
 
 export interface UploadPipelinePayload {
-  book_name: string;
-  s3_link: string;
-  visibility: "Public" | "Private";
-  uploader: string;
+  book_id: string;
   use_ocr?: boolean;
 }
 
 export async function triggerUploadPipeline(payload: UploadPipelinePayload) {
   try {
-    const response = await axios.post<{ status: string; book_id: string; book_title: string }>(
+    const response = await axios.post<{ status: string; book_id: string }>(
       `${env.flaskBaseUrl}/api/v1/pipelines/upload-embed`,
       payload,
       {
-        timeout: 5 * 60 * 1000,
+        // Flask returns immediately and processes in background
+        timeout: 15 * 1000,
       }
     );
 
@@ -34,7 +32,7 @@ export async function triggerUploadPipeline(payload: UploadPipelinePayload) {
       throw new HttpError(502, "Pipeline response missing book ID");
     }
 
-    return response.data as UploadPipelineResponse;
+    return { status: response.data.status, book_id: response.data.book_id, book_title: "", visibility: "Private", used_ocr: Boolean((payload as any).use_ocr) } as unknown as UploadPipelineResponse;
   } catch (error) {
     logger.error("Upload pipeline failed", error);
     throw new HttpError(502, "Failed to execute upload pipeline", error);
