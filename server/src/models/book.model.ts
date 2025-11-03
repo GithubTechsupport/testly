@@ -10,6 +10,7 @@ export interface BookDocument extends Document {
   uploaderName?: string;
   s3Link: string;
   coverImageUrl?: string;
+  state: "processing" | "finished";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +25,7 @@ const bookSchema = new Schema<BookDocument>(
     uploaderName: { type: String },
     s3Link: { type: String, required: true },
     coverImageUrl: { type: String },
+    state: { type: String, enum: ["processing", "finished"], default: "processing" },
   },
   {
     timestamps: true,
