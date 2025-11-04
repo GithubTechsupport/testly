@@ -207,7 +207,7 @@ class PDFProcessor:
                     chapter_ids.append(chapter_id)
 
                     chapter_sub_ids: list[ObjectId] = []
-                    for sub in chapter["subchapters"]:
+                    for idx, sub in enumerate(chapter["subchapters"], start=1):
                         writer = PyPDF2.PdfWriter()
                         start_index = max(sub["start_page"] - 1, 0)
                         end_index = min(sub["end_page"], len(reader.pages))
@@ -223,7 +223,9 @@ class PDFProcessor:
                         with open(local_path, "wb") as output_pdf:
                             writer.write(output_pdf)
 
-                        object_name = f"{book_id}/{filename}"
+                        # Pre-generate a stable subchapter ObjectId so the S3 key can include it
+                        sub_id = ObjectId()
+                        object_name = f"books/{book_id}/subchapters/{idx:03d}-{sub_id}.pdf"
                         s3_link = self.upload_to_s3(local_path, object_name)
 
                         sub_doc = {
@@ -234,8 +236,8 @@ class PDFProcessor:
                             "pageEnd": sub["end_page"],
                             "s3Link": s3_link,
                         }
-                        sub_result = self.subchapter_collection.insert_one(sub_doc)
-                        sub_id = sub_result.inserted_id
+                        # insert with pre-generated _id for consistency with S3 key
+                        sub_result = self.subchapter_collection.insert_one({"_id": sub_id, **sub_doc})
 
                         subchapter_ids.append(sub_id)
                         chapter_sub_ids.append(sub_id)
