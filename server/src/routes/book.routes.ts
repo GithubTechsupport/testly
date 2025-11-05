@@ -5,6 +5,7 @@ import {
   getMyBooksHandler,
   getPublicBooksHandler,
   uploadBookHandler,
+  deleteBookHandler,
 } from "../controllers/book.controller.js";
 import { authenticate, optionalAuthenticate } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/upload.middleware.js";
@@ -23,3 +24,4 @@ bookRouter.post(
   uploadBookHandler,
 );
 bookRouter.get("/:bookId", optionalAuthenticate, getBookDetailHandler);
+bookRouter.delete("/:bookId", authenticate, deleteBookHandler);
