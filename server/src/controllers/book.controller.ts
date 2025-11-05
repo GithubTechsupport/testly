@@ -5,6 +5,7 @@ import {
   getPublicBookSummaries,
   getUserLibrarySummaries,
   uploadBookAndTriggerPipeline,
+  deleteBookAndArtifacts,
 } from "../services/book.service.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { HttpError } from "../utils/http-error.js";
@@ -72,5 +73,15 @@ export const uploadBookHandler = asyncHandler(async (req: Request, res: Response
     useOcr,
   });
 
+  res.status(202).json(result);
+});
+
+export const deleteBookHandler = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user;
+  if (!user) {
+    throw new HttpError(401, "Authentication required");
+  }
+  const { bookId } = req.params;
+  const result = await deleteBookAndArtifacts(bookId, user);
   res.status(202).json(result);
 });

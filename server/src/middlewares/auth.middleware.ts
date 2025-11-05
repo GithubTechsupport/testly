@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
 
 import { verifyAccessToken } from "../utils/jwt.js";
 import { HttpError } from "../utils/http-error.js";
@@ -28,7 +29,14 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     req.user = user;
     next();
   } catch (error) {
-    next(error);
+    // Map JWT errors to 401 Unauthorized instead of generic 500s
+    if (error instanceof (jwt as any).TokenExpiredError) {
+      return next(new HttpError(401, "Token expired"));
+    }
+    if (error instanceof (jwt as any).JsonWebTokenError) {
+      return next(new HttpError(401, "Invalid token"));
+    }
+    return next(error);
   }
 }
 
