@@ -6,11 +6,12 @@ import { BookCard } from "@/features/books/components/book-card";
 import { BookCardSkeleton } from "@/features/books/components/book-card-skeleton";
 import { ChapterExplorerModal } from "@/features/books/components/chapter-explorer-modal";
 import { UploadBookModal } from "@/features/books/components/upload-book-modal";
-import { useMyBooks } from "@/features/books/hooks";
+import { useDeleteBook, useMyBooks } from "@/features/books/hooks";
 import type { BookSummaryDto } from "@/features/books/types";
 
 export function MyBooksPage() {
   const { data, isLoading, error } = useMyBooks();
+  const deleteMutation = useDeleteBook();
   const [isUploadOpen, setUploadOpen] = useState(false);
   const [chapterTarget, setChapterTarget] = useState<{ id: string; title: string } | null>(
     null
@@ -59,7 +60,12 @@ export function MyBooksPage() {
         {isLoading
           ? Array.from({ length: 6 }).map((_, index) => <BookCardSkeleton key={index} />)
           : books.map((book: BookSummaryDto) => (
-              <BookCard key={book.id} book={book} onShowChapters={openChapters} />
+              <BookCard
+                key={book.id}
+                book={book}
+                onShowChapters={openChapters}
+                onDeleteBook={(id) => deleteMutation.mutate(id)}
+              />
             ))}
 
         <AddBookCard onClick={() => setUploadOpen(true)} />

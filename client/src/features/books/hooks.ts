@@ -5,6 +5,7 @@ import { getAxiosErrorMessage } from "@/lib/axios-error";
 
 import {
   addBookToLibrary,
+  deleteBook,
   fetchBookDetail,
   fetchMyBooks,
   fetchPublicBooks,
@@ -13,6 +14,7 @@ import {
 } from "./api";
 import type {
   LibraryMutationResponse,
+  DeleteBookResponse,
   UploadBookResponse,
 } from "./types";
 
@@ -20,6 +22,10 @@ export function useMyBooks() {
   return useQuery({
     queryKey: ["books", "me"],
     queryFn: fetchMyBooks,
+    // Poll while user is on the page to reflect background processing completion
+    refetchInterval: 3000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -65,6 +71,21 @@ export function useLibraryMutation() {
     },
     onError: (error: unknown) => {
       toast.error(getAxiosErrorMessage(error));
+    },
+  });
+}
+
+export function useDeleteBook() {
+  const queryClient = useQueryClient();
+  return useMutation<DeleteBookResponse, unknown, string>({
+    mutationFn: (bookId: string) => deleteBook(bookId),
+    onSuccess: (data: DeleteBookResponse) => {
+      toast.success(data.message ?? "Deletion started");
+      queryClient.invalidateQueries({ queryKey: ["books", "me"] });
+      queryClient.invalidateQueries({ queryKey: ["books", "public"] });
+    },
+    onError: (error: unknown) => {
+      toast.error(getAxiosErrorMessage(error, "Failed to delete book"));
     },
   });
 }
