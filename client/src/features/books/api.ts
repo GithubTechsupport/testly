@@ -6,6 +6,7 @@ import type {
   LibraryMutationResponse,
   UploadBookResponse,
   VisibilityOption,
+  DeleteBookResponse,
 } from "./types";
 
 export async function fetchMyBooks() {
@@ -49,5 +50,10 @@ export async function addBookToLibrary(bookId: string) {
   const response = await apiClient.post<LibraryMutationResponse>(
     `/books/${bookId}/library`
   );
+  return response.data;
+}
+
+export async function deleteBook(bookId: string) {
+  const response = await apiClient.delete<DeleteBookResponse>(`/books/${bookId}`);
   return response.data;
 }

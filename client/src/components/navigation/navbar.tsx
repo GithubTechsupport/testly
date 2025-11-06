@@ -72,7 +72,7 @@ export function Navbar() {
               <Button asChild variant="ghost" size="sm">
                 <Link to="/login">Login</Link>
               </Button>
-              <Button asChild size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+              <Button asChild size="sm">
                 <Link to="/register">Create account</Link>
               </Button>
             </div>

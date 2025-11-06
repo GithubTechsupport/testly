@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Bookmark, Check, Library, Layers } from "lucide-react";
+import { Bookmark, Check, Library, Layers, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -11,6 +11,7 @@ interface BookCardProps {
   book: BookSummaryDto;
   onShowChapters?: (bookId: string) => void;
   onAddToLibrary?: (bookId: string) => void;
+  onDeleteBook?: (bookId: string) => void;
   isAdding?: boolean;
   variant?: "library" | "catalog";
 }
@@ -25,6 +26,7 @@ export const BookCard = memo(function BookCard({
   book,
   onShowChapters,
   onAddToLibrary,
+  onDeleteBook,
   isAdding = false,
   variant = "library",
 }: BookCardProps) {
@@ -36,8 +38,11 @@ export const BookCard = memo(function BookCard({
     .join("")
     .toUpperCase();
 
+  const isProcessing = book.state === "processing";
   return (
-    <Card className="group flex h-full flex-col overflow-hidden">
+    <Card className={cn("group relative flex h-full flex-col overflow-hidden", isProcessing && "opacity-60 grayscale")}
+      aria-disabled={isProcessing}
+    >
       <div className="relative">
         {book.coverImageUrl ? (
           <img
@@ -60,6 +65,26 @@ export const BookCard = memo(function BookCard({
         <span className="absolute left-4 top-4 rounded-full bg-slate-950/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300">
           {book.visibility}
         </span>
+        {isProcessing ? (
+          <span className="absolute right-4 top-4 rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-300">
+            Processing…
+          </span>
+        ) : null}
+
+        {onDeleteBook && !isProcessing ? (
+          <button
+            type="button"
+            className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-300 backdrop-blur transition hover:bg-red-500/20 hover:text-red-200"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteBook(book.id);
+            }}
+            aria-label="Delete book"
+            disabled={false}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        ) : null}
       </div>
 
       <CardContent className="flex flex-1 flex-col space-y-3">
@@ -82,6 +107,7 @@ export const BookCard = memo(function BookCard({
             variant="secondary"
             className="flex-1"
             onClick={() => onShowChapters(book.id)}
+            disabled={isProcessing}
             leftIcon={<Bookmark className="h-4 w-4" />}
           >
             Chapters
@@ -99,6 +125,7 @@ export const BookCard = memo(function BookCard({
                 : ""
             )}
             onClick={() => onAddToLibrary(book.id)}
+            disabled={isProcessing}
             isLoading={isAdding}
             aria-label={
               book.isInLibrary ? "Already in your library" : "Add to My Books"

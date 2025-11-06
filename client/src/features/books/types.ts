@@ -21,6 +21,7 @@ export interface BookSummaryDto {
   visibility: "Public" | "Private";
   uploaderName: string;
   uploaderId: string;
+  state?: "processing" | "finished";
   chapterCount: number;
   isInLibrary?: boolean;
 }
@@ -41,4 +42,9 @@ export interface LibraryMutationResponse {
   status: string;
   message: string;
   alreadyInLibrary?: boolean;
+}
+
+export interface DeleteBookResponse {
+  status: "accepted";
+  message: string;
 }
