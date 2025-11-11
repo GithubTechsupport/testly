@@ -14,6 +14,7 @@ const navLinks = [
   { to: "/", label: "Home" },
   { to: "/browse", label: "Browse" },
   { to: "/my-books", label: "My Books" },
+  { to: "/my-tests", label: "My Tests" },
 ];
 
 export function Navbar() {
