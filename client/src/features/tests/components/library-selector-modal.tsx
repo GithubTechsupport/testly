@@ -108,27 +108,29 @@ export function LibrarySelectorModal({
         </div>
 
         <section className="rounded-2xl border border-slate-800/70 bg-slate-950/60 p-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Spinner size="lg" />
-            </div>
-          ) : books && books.length ? (
-            <div className="space-y-3">
-              {books.map((book) => (
-                <LibraryBookItem
-                  key={book.id}
-                  book={book}
-                  modalOpen={open}
-                  isSelected={isSelected}
-                  toggleEntry={toggleEntry}
-                  cachedDetail={detailsCache[book.id]}
-                  onDetailLoaded={handleDetailLoaded}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">No books available in your library.</p>
-          )}
+          <div className="max-h-[26rem] overflow-y-auto pr-1">
+            {isLoading ? (
+              <div className="flex min-h-[12rem] items-center justify-center">
+                <Spinner size="lg" />
+              </div>
+            ) : books && books.length ? (
+              <div className="space-y-3 pb-1">
+                {books.map((book) => (
+                  <LibraryBookItem
+                    key={book.id}
+                    book={book}
+                    modalOpen={open}
+                    isSelected={isSelected}
+                    toggleEntry={toggleEntry}
+                    cachedDetail={detailsCache[book.id]}
+                    onDetailLoaded={handleDetailLoaded}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">No books available in your library.</p>
+            )}
+          </div>
         </section>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
