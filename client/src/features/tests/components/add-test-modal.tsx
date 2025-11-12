@@ -492,18 +492,21 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
                   Add material to preview how the questions may be delivered.
                 </p>
               ) : (
-                <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1">
-                  {questionOrder.map((item) => (
-                    <div
-                      key={`${item.questionNumber}-${item.entryId}-${item.difficulty}`}
-                      className="flex items-center justify-between rounded-lg border border-slate-800/60 bg-slate-900/60 px-3 py-2 text-sm"
-                    >
-                      <span className="text-slate-100">Question {item.questionNumber}</span>
-                      <span className="text-xs text-slate-400">
-                        {item.entryName} • {formatDifficultyLabel(item.difficulty)}
-                      </span>
-                    </div>
-                  ))}
+                <div className="mt-4 min-h-[20rem] max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+                  {questionOrder.map((item) => {
+                    const displayName = truncateLabel(item.entryName);
+                    return (
+                      <div
+                        key={`${item.questionNumber}-${item.entryId}-${item.difficulty}`}
+                        className="flex items-center justify-between rounded-lg border border-slate-800/60 bg-slate-900/60 px-3 py-2 text-sm"
+                      >
+                        <span className="text-slate-100">Question {item.questionNumber}</span>
+                        <span className="text-xs text-slate-400">
+                          {displayName} • {formatDifficultyLabel(item.difficulty)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </aside>
@@ -1175,6 +1178,13 @@ function cloneEntryList(entries: TestBuilderEntry[]): TestBuilderEntry[] {
     difficulty: cloneDifficulty(entry.difficulty),
     lockedDifficulties: [...entry.lockedDifficulties],
   }));
+}
+
+function truncateLabel(value: string, limit = 20): string {
+  if (value.length <= limit) {
+    return value;
+  }
+  return `${value.slice(0, limit).trimEnd()}...`;
 }
 
 function formatDifficultyLabel(value: TestDifficultyKey): string {
