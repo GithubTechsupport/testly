@@ -42,33 +42,34 @@ export function RegisterPage() {
 
   const onSubmit = (values: RegisterFormData) => {
     const { confirmPassword, ...payload } = values;
+    void confirmPassword;
     registerMutation.mutate(payload);
   };
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold text-white">Create your Testly account</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">Create your Testly account</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Upload textbooks, build exams, and keep everything organized in one place.
         </p>
       </div>
 
-      <Card className="border-slate-800/80 bg-slate-900/60">
+      <Card className="border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-slate-900/60">
         <CardContent className="space-y-6 py-8">
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input id="username" autoComplete="username" {...register("username")} />
               {errors.username && (
-                <p className="text-xs text-red-400">{errors.username.message}</p>
+                <p className="text-xs text-red-500 dark:text-red-400">{errors.username.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" autoComplete="email" {...register("email")} />
-              {errors.email && <p className="text-xs text-red-400">{errors.email.message}</p>}
+              {errors.email && <p className="text-xs text-red-500 dark:text-red-400">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -80,7 +81,7 @@ export function RegisterPage() {
                 {...register("password")}
               />
               {errors.password && (
-                <p className="text-xs text-red-400">{errors.password.message}</p>
+                <p className="text-xs text-red-500 dark:text-red-400">{errors.password.message}</p>
               )}
             </div>
 
@@ -93,7 +94,7 @@ export function RegisterPage() {
                 {...register("confirmPassword")}
               />
               {errors.confirmPassword && (
-                <p className="text-xs text-red-400">{errors.confirmPassword.message}</p>
+                <p className="text-xs text-red-500 dark:text-red-400">{errors.confirmPassword.message}</p>
               )}
             </div>
 
@@ -107,7 +108,7 @@ export function RegisterPage() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-slate-400">
+          <p className="text-center text-sm text-slate-600 dark:text-slate-400">
             Already have an account?{' '}
             <Link to="/login" className="text-brand hover:underline">
               Sign in

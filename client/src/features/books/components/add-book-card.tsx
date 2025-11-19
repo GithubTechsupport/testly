@@ -13,7 +13,7 @@ export function AddBookCard({ onClick }: AddBookCardProps) {
       onClick={onClick}
       className="group h-full w-full"
     >
-      <Card className="flex h-full flex-col items-center justify-center border-dashed border-slate-700 bg-slate-900/40 text-slate-400 transition hover:border-brand/60 hover:text-white">
+      <Card className="flex h-full flex-col items-center justify-center border-dashed border-slate-300 bg-slate-50 text-slate-500 transition hover:border-brand/60 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400 dark:hover:text-white">
         <CardContent className="flex flex-col items-center justify-center gap-3 py-10">
           <PlusCircle className="h-10 w-10 text-brand" />
           <span className="text-sm font-medium uppercase tracking-wide">

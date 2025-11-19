@@ -8,15 +8,15 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "outline";
 export type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 const baseStyles =
-  "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-60 rounded-lg";
+  "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:pointer-events-none disabled:opacity-60 rounded-lg";
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-dark focus-visible:outline-brand",
+  primary: "bg-brand text-white hover:bg-brand-dark",
   secondary:
-    "bg-slate-800 text-slate-100 hover:bg-slate-700 focus-visible:outline-slate-500",
+    "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700",
   outline:
-    "border border-slate-600 text-slate-100 hover:bg-slate-800/40 focus-visible:outline-slate-500",
-  ghost: "hover:bg-slate-800/50 text-slate-200 focus-visible:outline-slate-500",
+    "border border-slate-300 text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800/40",
+  ghost: "text-slate-600 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800/50",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -62,10 +62,7 @@ export function Button({
     >
       {isLoading ? (
         <>
-          <Spinner
-            className="text-white"
-            size={size === "sm" ? "sm" : "md"}
-          />
+          <Spinner className="text-current" size={size === "sm" ? "sm" : "md"} />
           <span className="sr-only">Loading {label}</span>
         </>
       ) : (

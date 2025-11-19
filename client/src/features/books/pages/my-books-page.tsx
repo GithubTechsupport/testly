@@ -17,7 +17,7 @@ export function MyBooksPage() {
     null
   );
 
-  const books: BookSummaryDto[] = data ?? [];
+  const books: BookSummaryDto[] = useMemo(() => data ?? [], [data]);
   const totalBooks = books.length;
   const publicBooks = useMemo(
     () => books.filter((book: BookSummaryDto) => book.visibility === "Public").length,
@@ -34,23 +34,23 @@ export function MyBooksPage() {
   return (
     <section className="space-y-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-white">My Books</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">My Books</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Manage your private uploads and curated public titles. Launch the upload pipeline when you
           add new material.
         </p>
-        <div className="flex flex-wrap gap-3 text-xs text-slate-400">
-          <span className="rounded-full border border-slate-700 px-3 py-1">
-            Total books: <strong className="ml-1 text-slate-200">{totalBooks}</strong>
+        <div className="flex flex-wrap gap-3 text-xs text-slate-600 dark:text-slate-400">
+          <span className="rounded-full border border-slate-300 px-3 py-1 dark:border-slate-700">
+            Total books: <strong className="ml-1 text-slate-900 dark:text-slate-200">{totalBooks}</strong>
           </span>
-          <span className="rounded-full border border-slate-700 px-3 py-1">
-            Public titles: <strong className="ml-1 text-slate-200">{publicBooks}</strong>
+          <span className="rounded-full border border-slate-300 px-3 py-1 dark:border-slate-700">
+            Public titles: <strong className="ml-1 text-slate-900 dark:text-slate-200">{publicBooks}</strong>
           </span>
         </div>
       </header>
 
       {error ? (
-        <div className="flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
           <AlertCircle className="h-5 w-5" />
           <span>Failed to load your library. Please try again shortly.</span>
         </div>

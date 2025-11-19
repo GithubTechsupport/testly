@@ -1,7 +1,8 @@
 import { Link, NavLink } from "react-router-dom";
-import { BookMarked, LogOut, Plus, UserRound } from "lucide-react";
+import { BookMarked, LogOut, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/cn";
 import {
   selectCurrentUser,
@@ -23,9 +24,9 @@ export function Navbar() {
   const clearAuth = useAuthStore(selectLogout);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-slate-200/60 bg-white/80 backdrop-blur dark:border-slate-800/60 dark:bg-slate-950/80">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-        <Link to="/" className="flex items-center gap-2 text-lg font-semibold text-white">
+        <Link to="/" className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white">
           <BookMarked className="h-6 w-6 text-brand" />
           Testly
         </Link>
@@ -40,7 +41,7 @@ export function Navbar() {
                   "rounded-full px-4 py-2 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-brand/90 text-white shadow shadow-brand/30"
-                    : "text-slate-300 hover:bg-slate-800/70 hover:text-white"
+                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white"
                 )
               }
             >
@@ -50,13 +51,14 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {isAuthenticated && user ? (
             <div className="flex items-center gap-3">
-              <div className="hidden flex-col text-right text-xs font-medium text-slate-300 sm:flex">
-                <span className="text-sm text-white">{user.username}</span>
+              <div className="hidden flex-col text-right text-xs font-medium text-slate-600 dark:text-slate-300 sm:flex">
+                <span className="text-sm text-slate-900 dark:text-white">{user.username}</span>
                 <span className="text-slate-500">{user.email}</span>
               </div>
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/20 text-brand">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/15 text-brand">
                 <UserRound className="h-5 w-5" />
               </span>
               <Button

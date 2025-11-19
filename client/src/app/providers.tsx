@@ -5,13 +5,16 @@ import { Toaster } from "react-hot-toast";
 
 import { queryClient } from "./query-client";
 import { router } from "./router";
+import { ThemeProvider } from "@/context/theme-context";
 
 export function AppProviders() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
-      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+        <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
