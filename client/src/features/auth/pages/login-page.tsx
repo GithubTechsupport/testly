@@ -42,20 +42,20 @@ export function LoginPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold text-white">Sign in to Testly</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">Sign in to Testly</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           {fromRoute ? "Please log in to continue" : "Enter your credentials to access your library."}
         </p>
       </div>
 
-      <Card className="border-slate-800/80 bg-slate-900/60">
+      <Card className="border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-slate-900/60">
         <CardContent className="space-y-6 py-8">
           <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-2">
               <Label htmlFor="identifier">Email or username</Label>
               <Input id="identifier" autoComplete="username" {...register("identifier")} />
               {errors.identifier && (
-                <p className="text-xs text-red-400">{errors.identifier.message}</p>
+                <p className="text-xs text-red-500 dark:text-red-400">{errors.identifier.message}</p>
               )}
             </div>
 
@@ -68,7 +68,7 @@ export function LoginPage() {
                 {...register("password")}
               />
               {errors.password && (
-                <p className="text-xs text-red-400">{errors.password.message}</p>
+                <p className="text-xs text-red-500 dark:text-red-400">{errors.password.message}</p>
               )}
             </div>
 
@@ -82,7 +82,7 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-slate-400">
+          <p className="text-center text-sm text-slate-600 dark:text-slate-400">
             Don't have an account?{' '}
             <Link to="/register" className="text-brand hover:underline">
               Register now

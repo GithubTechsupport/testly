@@ -830,7 +830,7 @@ function normalizePercentages(entries: TestBuilderEntry[]): TestBuilderEntry[] {
     fraction: raw - Math.floor(raw),
   }));
 
-  let sum = rounded.reduce((acc, item) => acc + item.value, 0);
+  const sum = rounded.reduce((acc, item) => acc + item.value, 0);
   const result = rounded.map(({ entry, value }) => ({
     ...entry,
     questionPercentage: clampInt(value, 0, 100),
@@ -897,7 +897,7 @@ function recalcCountsFromPercentages(
   }));
 
   const rounded = raw.map((item) => Math.round(item.raw));
-  let sum = rounded.reduce((acc, value) => acc + value, 0);
+  const sum = rounded.reduce((acc, value) => acc + value, 0);
 
   const result = entries.map((entry, index) => ({
     ...entry,
@@ -960,7 +960,7 @@ function recalcPercentagesFromCounts(
   }));
 
   const rounded = raw.map((item) => Math.round(item.raw));
-  let sum = rounded.reduce((acc, value) => acc + value, 0);
+  const sum = rounded.reduce((acc, value) => acc + value, 0);
 
   const result = entries.map((entry, index) => ({
     ...entry,
@@ -1092,7 +1092,7 @@ function enforceLockedDifficulty(entry: TestBuilderEntry): void {
   );
 
   const adjustableKeys = DIFFICULTY_KEYS.filter((key) => !lockedSet.has(key));
-  let remaining = clampInt(100 - lockedSum, 0, 100);
+  const remaining = clampInt(100 - lockedSum, 0, 100);
 
   if (!adjustableKeys.length) {
     if (lockedSet.size) {

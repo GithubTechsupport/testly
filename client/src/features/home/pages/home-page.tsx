@@ -19,10 +19,10 @@ export function HomePage() {
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-light">
             Exams orchestrated by AI
           </p>
-          <h1 className="text-4xl font-bold text-white sm:text-5xl">
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white sm:text-5xl">
             Craft tailored exam sets from the textbooks that matter.
           </h1>
-          <p className="max-w-2xl text-lg text-slate-300">
+          <p className="max-w-2xl text-lg text-slate-600 dark:text-slate-300">
             Testly turns your PDFs into a smart, searchable library and lets you
             blend chapters across books to generate engaging assessments. Upload,
             explore, curate, and launch exams in minutes.
@@ -48,12 +48,12 @@ export function HomePage() {
       </div>
 
       <div className="space-y-4">
-        <Card className="bg-gradient-to-br from-slate-900/90 to-slate-950/90">
+        <Card className="bg-gradient-to-br from-white to-slate-100 dark:from-slate-900/90 dark:to-slate-950/90">
           <CardContent className="space-y-3">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
               {isAuthenticated && user ? `Welcome back, ${user.username}!` : "What you can do"}
             </h2>
-            <ul className="space-y-2 text-sm text-slate-300">
+            <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
               <li>• Upload and embed your textbooks instantly.</li>
               <li>• Mix & match chapters across your library.</li>
               <li>• Generate AI-powered exam sets customized to your needs.</li>
@@ -62,20 +62,20 @@ export function HomePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-brand/20 bg-slate-900/70">
-          <CardContent className="space-y-3 text-sm text-slate-300">
-            <h3 className="text-base font-semibold text-white">How it works</h3>
+        <Card className="border-brand/20 bg-white/80 dark:bg-slate-900/70">
+          <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">How it works</h3>
             <ol className="space-y-2">
               <li>
-                <span className="font-semibold text-slate-200">1. Upload</span> –
+                <span className="font-semibold text-slate-900 dark:text-slate-200">1. Upload</span> –
                 Drop PDFs or pick curated textbooks.
               </li>
               <li>
-                <span className="font-semibold text-slate-200">2. Curate</span> –
+                <span className="font-semibold text-slate-900 dark:text-slate-200">2. Curate</span> –
                 Select books, chapters, and subchapters.
               </li>
               <li>
-                <span className="font-semibold text-slate-200">3. Generate</span> –
+                <span className="font-semibold text-slate-900 dark:text-slate-200">3. Generate</span> –
                 Let Testly craft an exam that fits your brief.
               </li>
             </ol>

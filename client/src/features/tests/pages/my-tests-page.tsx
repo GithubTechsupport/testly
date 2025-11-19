@@ -18,8 +18,8 @@ export function MyTestsPage() {
   return (
     <section className="space-y-8">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-white">My Tests</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">My Tests</h1>
+        <p className="text-sm text-slate-600 dark:text-slate-400">
           Curate assessments, balance their composition, and preview the resulting sequence before
           publishing.
         </p>
