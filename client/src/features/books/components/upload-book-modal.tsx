@@ -92,7 +92,7 @@ export function UploadBookModal({ open, onClose }: UploadBookModalProps) {
             {...register("bookTitle")}
           />
           {errors.bookTitle && (
-            <p className="text-xs text-red-400">{errors.bookTitle.message}</p>
+            <p className="text-xs text-red-500 dark:text-red-400">{errors.bookTitle.message}</p>
           )}
         </div>
 
@@ -104,7 +104,7 @@ export function UploadBookModal({ open, onClose }: UploadBookModalProps) {
               <option value="Public">Public</option>
             </Select>
             {errors.visibility && (
-              <p className="text-xs text-red-400">{errors.visibility.message}</p>
+              <p className="text-xs text-red-500 dark:text-red-400">{errors.visibility.message}</p>
             )}
           </div>
         </div>
@@ -131,7 +131,7 @@ export function UploadBookModal({ open, onClose }: UploadBookModalProps) {
               )}
             />
             {errors.pdfFile && (
-              <p className="text-xs text-red-400">{errors.pdfFile.message}</p>
+              <p className="text-xs text-red-500 dark:text-red-400">{errors.pdfFile.message}</p>
             )}
           </div>
 
@@ -156,7 +156,7 @@ export function UploadBookModal({ open, onClose }: UploadBookModalProps) {
               )}
             />
             {errors.coverImage && (
-              <p className="text-xs text-red-400">{errors.coverImage.message}</p>
+              <p className="text-xs text-red-500 dark:text-red-400">{errors.coverImage.message}</p>
             )}
           </div>
         </div>

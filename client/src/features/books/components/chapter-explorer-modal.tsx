@@ -53,16 +53,16 @@ export function ChapterExplorerModal({
             {data.chapters.map((chapter: ChapterDto) => (
               <div
                 key={chapter.id}
-                className="flex items-start justify-between rounded-xl border border-slate-800/70 bg-slate-900/40 p-4"
+                className="flex items-start justify-between rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800/70 dark:bg-slate-900/40"
               >
                 <div className="flex items-start gap-3">
                   <Layers className="mt-1 h-5 w-5 text-brand" />
                   <div>
-                    <p className="font-semibold text-slate-100">{chapter.title}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{chapter.title}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Pages {chapter.pageStart} – {chapter.pageEnd}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       {chapter.subchapters.length} subchapters
                     </p>
                   </div>
@@ -78,7 +78,7 @@ export function ChapterExplorerModal({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-slate-400">No chapters found for this book.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">No chapters found for this book.</p>
         )}
       </Modal>
 
@@ -98,7 +98,7 @@ export function ChapterExplorerModal({
 
 function SubchapterList({ chapter }: { chapter: ChapterDto }) {
   if (!chapter.subchapters.length) {
-    return <p className="text-sm text-slate-400">No subchapters available.</p>;
+    return <p className="text-sm text-slate-500 dark:text-slate-400">No subchapters available.</p>;
   }
 
   return (
@@ -106,10 +106,10 @@ function SubchapterList({ chapter }: { chapter: ChapterDto }) {
       {chapter.subchapters.map((sub) => (
         <li
           key={sub.id}
-          className="rounded-xl border border-slate-800/70 bg-slate-900/40 p-4"
+          className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800/70 dark:bg-slate-900/40"
         >
-          <p className="text-sm font-medium text-white">{sub.title}</p>
-          <p className="text-xs text-slate-400">
+          <p className="text-sm font-medium text-slate-900 dark:text-white">{sub.title}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Pages {sub.pageStart} – {sub.pageEnd}
           </p>
         </li>

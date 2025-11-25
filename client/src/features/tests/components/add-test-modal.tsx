@@ -341,21 +341,21 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
         <div className="flex flex-col gap-6">
           <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
             <div className="space-y-4">
-              <section className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-3">
+              <section className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800/70 dark:bg-slate-950/50">
                 <header className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-white">Included material</h3>
-                    <p className="text-xs text-slate-400">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Included material</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Entries inherit their position based on your library ordering.
                     </p>
                   </div>
-                  <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400">
+                  <span className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
                     {entries.length} selected
                   </span>
                 </header>
 
                 {entries.length === 0 ? (
-                  <div className="mt-6 rounded-xl border border-dashed border-slate-700 bg-slate-900/40 p-6 text-center text-sm text-slate-400">
+                  <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-100 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
                     Choose content from your library to start configuring a test.
                   </div>
                 ) : (
@@ -369,17 +369,17 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
                       return (
                         <div
                           key={entry.id}
-                          className="rounded-lg border border-slate-800/60 bg-slate-900/30 p-3"
+                          className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800/60 dark:bg-slate-900/30"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div className="space-y-1">
-                              <p className="text-sm font-semibold text-white">{entry.name}</p>
+                              <p className="text-sm font-semibold text-slate-900 dark:text-white">{entry.name}</p>
                               <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-slate-500">
                                 <span className="capitalize">{entry.type}</span>
-                                <span className="h-3 w-px bg-slate-800/70" />
-                                <span className="text-slate-300">{entry.questionCount} questions</span>
-                                <span className="h-3 w-px bg-slate-800/70" />
-                                <span className="text-slate-300">{entry.questionPercentage}% share</span>
+                                <span className="h-3 w-px bg-slate-300 dark:bg-slate-800/70" />
+                                <span className="text-slate-700 dark:text-slate-300">{entry.questionCount} questions</span>
+                                <span className="h-3 w-px bg-slate-300 dark:bg-slate-800/70" />
+                                <span className="text-slate-700 dark:text-slate-300">{entry.questionPercentage}% share</span>
                               </div>
                             </div>
                           </div>
@@ -387,7 +387,7 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
                           <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-wide text-slate-500">
                             <div className="flex items-center gap-2">
                               <span>Mode</span>
-                              <div className="inline-flex overflow-hidden rounded-md border border-slate-800 bg-slate-950/70">
+                              <div className="inline-flex overflow-hidden rounded-md border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-950/70">
                                 <button
                                   type="button"
                                   onClick={() => handleControlModeChange(entry.id, "percentage")}
@@ -414,8 +414,8 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
                                 </button>
                               </div>
                             </div>
-                            <span className="hidden h-5 w-px bg-slate-800/70 sm:block" />
-                            <label className="flex items-center gap-2 text-slate-400">
+                            <span className="hidden h-5 w-px bg-slate-300 dark:bg-slate-800/70 sm:block" />
+                            <label className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                               <span>% share</span>
                               <Input
                                 type="number"
@@ -434,7 +434,7 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
                                 className="h-8 w-20 text-right text-sm"
                               />
                             </label>
-                            <label className="flex items-center gap-2 text-slate-400">
+                            <label className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                               <span>Questions</span>
                               <Input
                                 type="number"
@@ -474,21 +474,21 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
               </section>
             </div>
 
-            <aside className="rounded-2xl border border-slate-800/70 bg-slate-950/60 p-4">
+            <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800/70 dark:bg-slate-950/60">
               <header className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Preview order</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Preview order</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Draft sequence is generated from your current allocation.
                   </p>
                 </div>
-                <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-400">
+                <span className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
                   {questionOrder.length} questions
                 </span>
               </header>
 
               {questionOrder.length === 0 ? (
-                <p className="mt-6 text-sm text-slate-400">
+                <p className="mt-6 text-sm text-slate-500 dark:text-slate-400">
                   Add material to preview how the questions may be delivered.
                 </p>
               ) : (
@@ -498,10 +498,10 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
                     return (
                       <div
                         key={`${item.questionNumber}-${item.entryId}-${item.difficulty}`}
-                        className="flex items-center justify-between rounded-lg border border-slate-800/60 bg-slate-900/60 px-3 py-2 text-sm"
+                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-800/60 dark:bg-slate-900/60"
                       >
-                        <span className="text-slate-100">Question {item.questionNumber}</span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-slate-900 dark:text-slate-100">Question {item.questionNumber}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           {displayName} • {formatDifficultyLabel(item.difficulty)}
                         </span>
                       </div>
@@ -512,7 +512,7 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
             </aside>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-800/70 bg-slate-950/70 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between dark:border-slate-800/70 dark:bg-slate-950/70">
             <Button
               type="button"
               variant="secondary"
@@ -524,7 +524,7 @@ export function AddTestModal({ open, onClose, onCreate }: AddTestModalProps) {
             </Button>
 
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
-              <Label htmlFor="total-questions" className="text-xs uppercase text-slate-400">
+              <Label htmlFor="total-questions" className="text-xs uppercase text-slate-500 dark:text-slate-400">
                 Number of questions
               </Label>
               <Input
@@ -601,8 +601,8 @@ function DifficultyEditor({
   ]);
 
   return (
-    <div className="mt-3 rounded-lg border border-slate-800/60 bg-slate-950/60 p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Difficulty distribution</p>
+    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800/60 dark:bg-slate-950/60">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Difficulty distribution</p>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         {DIFFICULTY_KEYS.map((key) => {
           const fieldKey = `${entryId}:difficulty-${key}`;
@@ -613,7 +613,7 @@ function DifficultyEditor({
           return (
             <div key={key} className="space-y-1">
               <div className="flex items-center justify-between text-[11px] uppercase tracking-wide">
-                <span className="text-slate-300">{formatDifficultyLabel(key)}</span>
+                <span className="text-slate-700 dark:text-slate-300">{formatDifficultyLabel(key)}</span>
                 <span className="text-slate-500">{questionShare} q</span>
               </div>
               <div className="flex items-center gap-2">
@@ -633,10 +633,10 @@ function DifficultyEditor({
                   onBlur={() => onFieldBlur(fieldKey)}
                   className={cn(
                     "h-8 w-full text-right text-sm",
-                    isLocked && "border-slate-700 bg-slate-900/70 focus-visible:ring-0"
+                    isLocked && "border-slate-300 bg-slate-100 focus-visible:ring-0 dark:border-slate-700 dark:bg-slate-900/70"
                   )}
                 />
-                <label className="flex items-center gap-1 text-[11px] uppercase text-slate-400">
+                <label className="flex items-center gap-1 text-[11px] uppercase text-slate-500 dark:text-slate-400">
                   <input
                     type="checkbox"
                     checked={isLocked}
@@ -647,7 +647,7 @@ function DifficultyEditor({
                       }
                       onToggleLock(entryId, key);
                     }}
-                    className="h-3.5 w-3.5 rounded border border-slate-600 bg-slate-900 text-brand focus:outline-none"
+                    className="h-3.5 w-3.5 rounded border border-slate-400 bg-white text-brand focus:outline-none dark:border-slate-600 dark:bg-slate-900"
                   />
                   Lock
                 </label>

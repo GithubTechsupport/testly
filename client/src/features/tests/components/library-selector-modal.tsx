@@ -94,20 +94,20 @@ export function LibrarySelectorModal({
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
-          <p className="text-xs text-slate-400">{selectionMap.size} entries selected</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{selectionMap.size} entries selected</p>
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="text-slate-400 hover:text-white"
+            className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
           >
             <X className="h-4 w-4" aria-hidden="true" />
             <span className="sr-only">Close</span>
           </Button>
         </div>
 
-        <section className="rounded-2xl border border-slate-800/70 bg-slate-950/60 p-4">
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800/70 dark:bg-slate-950/60">
           <div className="max-h-[26rem] overflow-y-auto pr-1">
             {isLoading ? (
               <div className="flex min-h-[12rem] items-center justify-center">
@@ -128,13 +128,13 @@ export function LibrarySelectorModal({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-400">No books available in your library.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No books available in your library.</p>
             )}
           </div>
         </section>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             Selected items will appear in the test builder in the same order as shown here.
           </p>
           <div className="flex gap-2">
@@ -181,12 +181,12 @@ function LibraryBookItem({
   const bookEntry = useMemo(() => createBookEntry(book), [book]);
 
   return (
-    <div className="rounded-xl border border-slate-800/60 bg-slate-900/50 p-4">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800/60 dark:bg-slate-900/50">
       <div className="flex items-start justify-between gap-3">
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
-          className="flex items-start gap-3 text-left text-slate-200"
+          className="flex items-start gap-3 text-left text-slate-700 dark:text-slate-200"
         >
           {expanded ? (
             <ChevronDown className="mt-1 h-4 w-4 text-slate-500" />
@@ -194,18 +194,18 @@ function LibraryBookItem({
             <ChevronRight className="mt-1 h-4 w-4 text-slate-500" />
           )}
           <div>
-            <p className="text-sm font-semibold text-white">{book.bookTitle}</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{book.bookTitle}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {book.chapterCount} chapters • {book.visibility.toLowerCase()}
             </p>
           </div>
         </button>
-        <label className="flex items-center gap-2 text-xs text-slate-300">
+        <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
           <input
             type="checkbox"
             checked={isSelected("book", book.id)}
             onChange={() => toggleEntry(bookEntry)}
-            className="h-4 w-4 rounded border border-slate-600 bg-slate-900 text-brand focus:outline-none"
+            className="h-4 w-4 rounded border border-slate-400 bg-white text-brand focus:outline-none dark:border-slate-600 dark:bg-slate-900"
           />
           <span>Select</span>
         </label>
@@ -247,30 +247,30 @@ function LibraryChapterItem({ book, chapter, isSelected, toggleEntry }: LibraryC
   const chapterEntry = useMemo(() => createChapterEntry(book, chapter), [book, chapter]);
 
   return (
-    <div className="rounded-lg border border-slate-800/60 bg-slate-900/50 p-3">
+    <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800/60 dark:bg-slate-900/50">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2">
           <Layers className="mt-1 h-4 w-4 text-brand" />
           <div>
-            <p className="text-sm font-medium text-white">{chapter.title}</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-sm font-medium text-slate-900 dark:text-white">{chapter.title}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Pages {chapter.pageStart} – {chapter.pageEnd}
             </p>
           </div>
         </div>
-        <label className="flex items-center gap-2 text-xs text-slate-300">
+        <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
           <input
             type="checkbox"
             checked={isSelected("chapter", chapter.id)}
             onChange={() => toggleEntry(chapterEntry)}
-            className="h-4 w-4 rounded border border-slate-600 bg-slate-900 text-brand focus:outline-none"
+            className="h-4 w-4 rounded border border-slate-400 bg-white text-brand focus:outline-none dark:border-slate-600 dark:bg-slate-900"
           />
           <span>Select</span>
         </label>
       </div>
 
       {chapter.subchapters.length ? (
-        <div className="mt-3 space-y-2 border-t border-slate-800/60 pt-3">
+        <div className="mt-3 space-y-2 border-t border-slate-200 pt-3 dark:border-slate-800/60">
           {chapter.subchapters.map((subchapter) => (
             <LibrarySubchapterRow
               key={subchapter.id}
@@ -309,19 +309,19 @@ function LibrarySubchapterRow({
   ]);
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-800/60 bg-slate-950/40 px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800/60 dark:bg-slate-950/40">
       <div>
-        <p className="text-xs font-medium text-white">{subchapter.title}</p>
+        <p className="text-xs font-medium text-slate-900 dark:text-white">{subchapter.title}</p>
         <p className="text-[11px] text-slate-500">
           Pages {subchapter.pageStart} – {subchapter.pageEnd}
         </p>
       </div>
-      <label className="flex items-center gap-2 text-xs text-slate-300">
+      <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
         <input
           type="checkbox"
           checked={isSelected("subchapter", subchapter.id)}
           onChange={() => toggleEntry(entry)}
-          className="h-4 w-4 rounded border border-slate-600 bg-slate-900 text-brand focus:outline-none"
+          className="h-4 w-4 rounded border border-slate-400 bg-white text-brand focus:outline-none dark:border-slate-600 dark:bg-slate-900"
         />
         <span>Select</span>
       </label>
