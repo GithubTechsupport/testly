@@ -41,20 +41,20 @@ export function Modal({ open, onClose, title, description, children, className }
             >
               <Dialog.Panel
                 className={cn(
-                  "w-full max-w-2xl transform overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/90 p-6 text-left align-middle shadow-xl transition-all",
+                  "w-full max-w-2xl transform overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 text-left align-middle shadow-xl transition-all dark:border-slate-800 dark:bg-slate-900/90",
                   className
                 )}
               >
-                <Dialog.Title className="text-xl font-semibold text-slate-100">
+                <Dialog.Title className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                   {title}
                 </Dialog.Title>
                 {description ? (
-                  <Dialog.Description className="mt-1 text-sm text-slate-400">
+                  <Dialog.Description className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     {description}
                   </Dialog.Description>
                 ) : null}
 
-                <div className="mt-4 space-y-4 text-slate-200">{children}</div>
+                <div className="mt-4 space-y-4 text-slate-700 dark:text-slate-200">{children}</div>
               </Dialog.Panel>
             </Transition.Child>
           </div>
